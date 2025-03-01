@@ -12,6 +12,7 @@ app = Flask(__name__)
 socketio = SocketIO(app, async_mode='gevent')
 
 @app.route('/')
+@application
 def home():
     return "¡Hola, Bienvenido a Mi Concursillo!"
 
