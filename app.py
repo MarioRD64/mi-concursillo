@@ -12,7 +12,7 @@ socketio = SocketIO(app, async_mode='gevent')
 
 @app.route('/')
 def home():
-    return "¡Hola, Bienvenido a Mi Concursillo!"
+    return "whomp whomp"
 
 if __name__ == '__main__':
     print("🚀 Ejecutando Flask en el puerto 5000...")  # 🔥 Mensaje de prueba
