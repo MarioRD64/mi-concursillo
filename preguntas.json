@@ -1,0 +1,12 @@
+[
+    {
+        "pregunta": "¿Cómo es pato en japonés?",
+        "opciones": {
+            "A": "Kamo",
+            "B": "Ahiru",
+            "C": "Ko",
+            "D": "A y B son correctas"
+        },
+        "respuesta_correcta": "D"
+    }
+]
