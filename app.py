@@ -88,12 +88,6 @@ def actualizar_puntuacion():
     jugadores[nombre] += puntos
     return jsonify({"mensaje": f"🏆 {nombre} ahora tiene {jugadores[nombre]} puntos"})
 
-# ✅ WebSocket para mensajes en el chat
-@socketio.on("mensaje")
-def manejar_mensaje(datos):
-    print(f"💬 Mensaje recibido: {datos}")
-    socketio.emit("mensaje", datos)  # Reenviar mensaje a todos los jugadores
-
 # ✅ WebSocket para actualizar las puntuaciones en tiempo real
 @socketio.on("actualizar_puntuacion")
 def actualizar_puntuacion_socket(data):
@@ -105,37 +99,7 @@ def actualizar_puntuacion_socket(data):
         jugadores[nombre] += puntos
         socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
 
-# ✅ Temporizador para responder preguntas
-def iniciar_temporizador(segundos):
-    print(f"⏳ Tiempo límite: {segundos} segundos")
-    time.sleep(segundos)
-    print("⏰ ¡Tiempo terminado!")
-
-# ✅ Ruta para iniciar un temporizador
-@app.route("/temporizador", methods=["POST"])
-def iniciar_temporizador_api():
-    datos = request.json
-    segundos = datos.get("segundos", 30)
-
-    t = threading.Thread(target=iniciar_temporizador, args=(segundos,))
-    t.start()
-
-    return jsonify({"mensaje": f"⏳ Temporizador de {segundos} segundos iniciado"})
-
-# ✅ Evento para actualizar la puntuación de los jugadores
-@socketio.on("actualizar_puntuacion_jugador")
-def actualizar_puntuacion_jugador(data):
-    nombre = data["nombre"]
-    puntos = data["puntos"]
-
-    # Verificar si el jugador existe
-    if nombre in jugadores:
-        jugadores[nombre] += puntos
-        socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
-    else:
-        socketio.emit("error", {"mensaje": f"Jugador {nombre} no encontrado"})
-
-# ✅ Evento para mostrar la pregunta
+# ✅ WebSocket para mostrar las preguntas
 @socketio.on("mostrar_pregunta")
 def mostrar_pregunta(data):
     pregunta = data.get("pregunta")
@@ -149,5 +113,4 @@ if __name__ == "__main__":
     print("🚀 Ejecutando Flask en el puerto 5000...")
     port = int(os.environ.get("PORT", 5000))  # Soporte para Render
     socketio.run(app, host="0.0.0.0", port=port)
-
 

@@ -25,8 +25,7 @@ function registrarJugador() {
             alert(data.error); // Si hubo un error, lo mostramos
         } else {
             document.getElementById("registro").style.display = "none"; // Ocultamos la sección de registro
-            document.getElementById("pregunta-container").style.display = "block"; // Mostramos la sección de preguntas
-            cargarPregunta(); // Llamamos a la función para cargar la pregunta
+            document.getElementById("unirseSala").style.display = "block"; // Mostramos la sección de unirse a sala
         }
     })
     .catch(error => console.error("❌ Error en el registro:", error)); // En caso de error, lo mostramos
