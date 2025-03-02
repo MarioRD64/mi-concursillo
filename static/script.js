@@ -20,6 +20,7 @@ function registrarJugador() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error); // Si hubo un error, lo mostramos
         } else {
@@ -49,6 +50,7 @@ function unirseSala() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error); // Si hubo un error, lo mostramos
         } else {
@@ -67,6 +69,7 @@ function cargarPregunta() {
     fetch("/preguntas")
         .then(response => response.json())
         .then(data => {
+            console.log(data); // Verificar que las preguntas están cargando correctamente
             if (data.length > 0) {
                 // Seleccionamos una pregunta aleatoria
                 let preguntaAleatoria = data[Math.floor(Math.random() * data.length)];
@@ -117,4 +120,3 @@ function verificarRespuesta(boton, opcion, seleccion, correcta) {
     let botones = document.querySelectorAll(".boton-opcion");
     botones.forEach(b => b.disabled = true);
 }
-
