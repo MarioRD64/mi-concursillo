@@ -92,7 +92,9 @@ function mostrarPregunta(pregunta) {
         let boton = document.createElement("button");
         boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = () => verificarRespuesta(boton, opcion, pregunta.opciones[opcion], pregunta.respuesta_correcta);
+        boton.onclick = function() {
+            verificarRespuesta(boton, opcion, pregunta.opciones[opcion], pregunta.respuesta_correcta);
+        };
         opcionesDiv.appendChild(boton);
     });
 }
