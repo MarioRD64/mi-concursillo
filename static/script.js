@@ -1,11 +1,13 @@
 const socket = io();  // Conectar a Socket.IO
 
+let nombreJugador = "";  // Variable global para almacenar el nombre del jugador
+
 // Función para registrar un jugador
 function registrarJugador() {
-    let nombre = document.getElementById("nombreJugador").value.trim();
+    nombreJugador = document.getElementById("nombreJugador").value.trim();
 
     // Verificamos si el nombre está vacío
-    if (!nombre) {
+    if (!nombreJugador) {
         alert("❌ Ingresa tu nombre antes de unirte.");
         return;
     }
@@ -14,7 +16,7 @@ function registrarJugador() {
     fetch("/registrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombre })
+        body: JSON.stringify({ nombre: nombreJugador })
     })
     .then(response => response.json())
     .then(data => {
@@ -31,10 +33,10 @@ function registrarJugador() {
 
 // Función para unirse a una sala
 function unirseSala() {
-    let nombre = document.getElementById("nombreJugador").value.trim();
+    nombreJugador = document.getElementById("nombreJugador").value.trim();
     let sala = document.getElementById("nombreSala").value.trim();
 
-    if (!nombre || !sala) {
+    if (!nombreJugador || !sala) {
         alert("❌ Ingresa tu nombre y el nombre de la sala.");
         return;
     }
@@ -43,7 +45,7 @@ function unirseSala() {
     fetch("/unirse_sala", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombre, sala: sala })
+        body: JSON.stringify({ nombre: nombreJugador, sala: sala })
     })
     .then(response => response.json())
     .then(data => {
@@ -88,15 +90,16 @@ function mostrarPregunta(pregunta) {
         let boton = document.createElement("button");
         boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = () => verificarRespuesta(boton, pregunta.opciones[opcion], pregunta.respuesta_correcta);
+        boton.onclick = () => verificarRespuesta(boton, opcion, pregunta.opciones[opcion], pregunta.respuesta_correcta);
         opcionesDiv.appendChild(boton);
     });
 }
 
 // Función para verificar la respuesta
-function verificarRespuesta(boton, seleccion, correcta) {
+function verificarRespuesta(boton, opcion, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
+    // Comprobamos si la opción seleccionada es la correcta
     if (seleccion === correcta) {
         mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
         mensaje.style.color = "green";
