@@ -98,11 +98,11 @@ function verificarRespuesta(boton, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
     if (seleccion === correcta) {
-        mensaje.innerText = "✅ ¡Correcto!";
+        mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
         mensaje.style.color = "green";
         boton.classList.add("correcto");
     } else {
-        mensaje.innerText = `❌ Incorrecto, la respuesta era: ${correcta}`;
+        mensaje.innerText = "❌ Incorrecto"; // Solo mostrar "Incorrecto" sin decir la respuesta correcta
         mensaje.style.color = "red";
         boton.classList.add("incorrecto");
     }
@@ -114,3 +114,4 @@ function verificarRespuesta(boton, seleccion, correcta) {
     let botones = document.querySelectorAll(".boton-opcion");
     botones.forEach(b => b.disabled = true);
 }
+
