@@ -1,11 +1,12 @@
 const socket = io();  // Conectar a Socket.IO
+let nombreJugador = ""; // Variable global para almacenar el nombre del jugador
 
 // Función para registrar un jugador
 function registrarJugador() {
-    let nombre = document.getElementById("nombreJugador").value.trim();
+    nombreJugador = document.getElementById("nombreJugador").value.trim();
 
     // Verificamos si el nombre está vacío
-    if (!nombre) {
+    if (!nombreJugador) {
         alert("❌ Ingresa tu nombre antes de unirte.");
         return;
     }
@@ -14,7 +15,7 @@ function registrarJugador() {
     fetch("/registrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombre })
+        body: JSON.stringify({ nombre: nombreJugador })
     })
     .then(response => response.json())
     .then(data => {
@@ -88,13 +89,13 @@ function mostrarPregunta(pregunta) {
         let boton = document.createElement("button");
         boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = () => verificarRespuesta(boton, pregunta.opciones[opcion], pregunta.respuesta_correcta);
+        boton.onclick = () => verificarRespuesta(boton, opcion, pregunta.respuesta_correcta, pregunta); // Enviamos la opción seleccionada
         opcionesDiv.appendChild(boton);
     });
 }
 
 // Función para verificar la respuesta
-function verificarRespuesta(boton, seleccion, correcta) {
+function verificarRespuesta(boton, seleccion, correcta, pregunta) {
     let mensaje = document.getElementById("mensaje");
 
     if (seleccion === correcta) {
@@ -108,7 +109,11 @@ function verificarRespuesta(boton, seleccion, correcta) {
     }
 
     // Emitir la puntuación al servidor
-    socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
+    socket.emit("verificar_respuesta", { 
+        nombre: nombreJugador, 
+        respuesta: seleccion, 
+        pregunta: pregunta 
+    });
 
     // Desactivar todos los botones después de responder
     document.querySelectorAll(".boton-opcion").forEach(btn => btn.disabled = true);
