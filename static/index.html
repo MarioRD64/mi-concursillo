@@ -7,9 +7,23 @@
     <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
-    <h1>¡Bienvenido a Mi Concursillo! 🎉</h1>
-    <button onclick="cargarPregunta()">Mostrar Pregunta</button>
-    <div id="pregunta"></div>
+    <h1>🎉 ¡Bienvenido a Mi Concursillo! 🎉</h1>
+    
+    <!-- Registro del jugador -->
+    <div id="registro">
+        <input type="text" id="nombreJugador" placeholder="Tu nombre">
+        <button onclick="registrarJugador()">Unirse</button>
+    </div>
+
+    <!-- Sección de preguntas (oculta al inicio) -->
+    <div id="pregunta-container" style="display: none;">
+        <h2 id="textoPregunta"></h2>
+        <div id="opciones"></div>
+    </div>
+
+    <p id="mensaje"></p>
+
     <script src="static/script.js"></script>
 </body>
 </html>
+

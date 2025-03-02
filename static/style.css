@@ -1,15 +1,36 @@
+/* Estilos generales */
 body {
     font-family: Arial, sans-serif;
     text-align: center;
     background-color: #f4f4f4;
+    padding: 20px;
 }
+
+/* Botones generales */
 button {
-    padding: 10px 20px;
+    display: block;
+    width: 200px;
+    margin: 10px auto;
+    padding: 10px;
+    font-size: 18px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
     background-color: #007bff;
     color: white;
-    border: none;
-    cursor: pointer;
 }
+
 button:hover {
     background-color: #0056b3;
+}
+
+/* Estilos para respuestas correctas e incorrectas */
+.correcto {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.incorrecto {
+    background-color: #FF4C4C;
+    color: white;
 }
