@@ -108,7 +108,7 @@ function verificarRespuesta(boton, seleccion, correcta) {
     }
 
     // Emitir la puntuación al servidor
-    socket.emit("actualizar_puntuacion", { nombre: jugador, puntos: seleccion === correcta ? 10 : 0 });
+    socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
 
     // Desactivar todos los botones después de responder
     document.querySelectorAll(".boton-opcion").forEach(btn => btn.disabled = true);
