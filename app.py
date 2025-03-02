@@ -52,7 +52,7 @@ def registrar_jugador():
         return jsonify({"error": "El nombre ya está en uso"}), 400
 
     jugadores[nombre] = 0
-    return jsonify({"mensaje": f"👤 {nombre} se ha unido", "jugadores": jugadores})
+    return jsonify({"mensaje": f"👤 {nombre} se ha unido", "jugadores": jugadores}), 200
 
 # ✅ Ruta para actualizar puntuaciones
 @app.route("/puntuacion", methods=["POST"])
@@ -95,4 +95,3 @@ if __name__ == "__main__":
     print("🚀 Ejecutando Flask en el puerto 5000...")
     port = int(os.environ.get("PORT", 5000))  # Soporte para Render
     socketio.run(app, host="0.0.0.0", port=port)
-
