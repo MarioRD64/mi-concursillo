@@ -76,10 +76,6 @@ def unirse_a_sala():
     # Agregar al jugador en la sala
     salas[sala].append(nombre)
 
-    # Enviar la pregunta y las opciones a este jugador
-    pregunta_aleatoria = preguntas[0]  # Suponiendo que seleccionamos la primera pregunta
-    socketio.emit("nueva_pregunta", {"pregunta": pregunta_aleatoria["pregunta"], "opciones": pregunta_aleatoria["opciones"]}, room=sala)
-
     return jsonify({"mensaje": f"👤 {nombre} se unió a la sala {sala}", "jugadores": salas[sala]}), 200
 
 # ✅ Ruta para actualizar puntuaciones
@@ -111,15 +107,12 @@ def actualizar_puntuacion_socket(data):
     if nombre in jugadores:
         jugadores[nombre] += puntos
         socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
-    else:
-        socketio.emit("error", {"mensaje": f"Jugador {nombre} no encontrado"})
 
 # ✅ Temporizador para responder preguntas
 def iniciar_temporizador(segundos):
     print(f"⏳ Tiempo límite: {segundos} segundos")
     time.sleep(segundos)
     print("⏰ ¡Tiempo terminado!")
-    socketio.emit("tiempo_terminado", {"mensaje": "⏰ ¡Tiempo terminado!"})
 
 # ✅ Ruta para iniciar un temporizador
 @app.route("/temporizador", methods=["POST"])
@@ -131,6 +124,28 @@ def iniciar_temporizador_api():
     t.start()
 
     return jsonify({"mensaje": f"⏳ Temporizador de {segundos} segundos iniciado"})
+
+# ✅ Evento para actualizar la puntuación de los jugadores
+@socketio.on("actualizar_puntuacion_jugador")
+def actualizar_puntuacion_jugador(data):
+    nombre = data["nombre"]
+    puntos = data["puntos"]
+
+    # Verificar si el jugador existe
+    if nombre in jugadores:
+        jugadores[nombre] += puntos
+        socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
+    else:
+        socketio.emit("error", {"mensaje": f"Jugador {nombre} no encontrado"})
+
+# ✅ Evento para mostrar la pregunta
+@socketio.on("mostrar_pregunta")
+def mostrar_pregunta(data):
+    pregunta = data.get("pregunta")
+    opciones = data.get("opciones")
+
+    # Enviar la pregunta y las opciones a todos los jugadores
+    socketio.emit("nueva_pregunta", {"pregunta": pregunta, "opciones": opciones})
 
 # ✅ Inicio del servidor Flask y WebSockets
 if __name__ == "__main__":
