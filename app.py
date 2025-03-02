@@ -65,13 +65,20 @@ def unirse_a_sala():
     if not nombre or not sala:
         return jsonify({"error": "Nombre o sala inválidos"}), 400
 
-    # Verificar si la sala existe, si no, se crea
+    # Verificar si la sala existe
     if sala not in salas:
         salas[sala] = []
 
-    # Agregar al jugador en la sala (si no está ya)
-    if nombre not in salas[sala]:
-        salas[sala].append(nombre)
+    # Verificar si el jugador ya está en la sala
+    if nombre in salas[sala]:
+        return jsonify({"error": "Jugador ya está en la sala"}), 400
+
+    # Agregar al jugador en la sala
+    salas[sala].append(nombre)
+
+    # Enviar la pregunta y las opciones a este jugador
+    pregunta_aleatoria = preguntas[0]  # Suponiendo que seleccionamos la primera pregunta
+    socketio.emit("nueva_pregunta", {"pregunta": pregunta_aleatoria["pregunta"], "opciones": pregunta_aleatoria["opciones"]}, room=sala)
 
     return jsonify({"mensaje": f"👤 {nombre} se unió a la sala {sala}", "jugadores": salas[sala]}), 200
 
@@ -88,6 +95,12 @@ def actualizar_puntuacion():
     jugadores[nombre] += puntos
     return jsonify({"mensaje": f"🏆 {nombre} ahora tiene {jugadores[nombre]} puntos"})
 
+# ✅ WebSocket para mensajes en el chat
+@socketio.on("mensaje")
+def manejar_mensaje(datos):
+    print(f"💬 Mensaje recibido: {datos}")
+    socketio.emit("mensaje", datos)  # Reenviar mensaje a todos los jugadores
+
 # ✅ WebSocket para actualizar las puntuaciones en tiempo real
 @socketio.on("actualizar_puntuacion")
 def actualizar_puntuacion_socket(data):
@@ -98,19 +111,29 @@ def actualizar_puntuacion_socket(data):
     if nombre in jugadores:
         jugadores[nombre] += puntos
         socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
+    else:
+        socketio.emit("error", {"mensaje": f"Jugador {nombre} no encontrado"})
 
-# ✅ WebSocket para mostrar las preguntas
-@socketio.on("mostrar_pregunta")
-def mostrar_pregunta(data):
-    pregunta = data.get("pregunta")
-    opciones = data.get("opciones")
+# ✅ Temporizador para responder preguntas
+def iniciar_temporizador(segundos):
+    print(f"⏳ Tiempo límite: {segundos} segundos")
+    time.sleep(segundos)
+    print("⏰ ¡Tiempo terminado!")
+    socketio.emit("tiempo_terminado", {"mensaje": "⏰ ¡Tiempo terminado!"})
 
-    # Enviar la pregunta y las opciones a todos los jugadores
-    socketio.emit("nueva_pregunta", {"pregunta": pregunta, "opciones": opciones})
+# ✅ Ruta para iniciar un temporizador
+@app.route("/temporizador", methods=["POST"])
+def iniciar_temporizador_api():
+    datos = request.json
+    segundos = datos.get("segundos", 30)
+
+    t = threading.Thread(target=iniciar_temporizador, args=(segundos,))
+    t.start()
+
+    return jsonify({"mensaje": f"⏳ Temporizador de {segundos} segundos iniciado"})
 
 # ✅ Inicio del servidor Flask y WebSockets
 if __name__ == "__main__":
     print("🚀 Ejecutando Flask en el puerto 5000...")
     port = int(os.environ.get("PORT", 5000))  # Soporte para Render
     socketio.run(app, host="0.0.0.0", port=port)
-

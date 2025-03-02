@@ -103,6 +103,10 @@ function mostrarPregunta(pregunta) {
 function verificarRespuesta(boton, opcion, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
+    // Desactivar todos los botones después de que uno haya sido seleccionado
+    let botones = document.querySelectorAll(".boton-opcion");
+    botones.forEach(b => b.disabled = true);
+
     // Comprobamos si la opción seleccionada es la correcta
     if (seleccion === correcta) {
         mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
@@ -116,9 +120,7 @@ function verificarRespuesta(boton, opcion, seleccion, correcta) {
 
     // Emitir la puntuación al servidor
     socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
-
 }
-
 
 
     
