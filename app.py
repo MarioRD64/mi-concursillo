@@ -46,11 +46,15 @@ def registrar_jugador():
     datos = request.json
     nombre = datos.get("nombre")
 
+    # Verificamos si el nombre es válido
     if not nombre:
         return jsonify({"error": "Nombre inválido"}), 400
+
+    # Verificamos si el nombre ya está en uso
     if nombre in jugadores:
         return jsonify({"error": "El nombre ya está en uso"}), 400
 
+    # Registramos al jugador y asignamos puntuación inicial
     jugadores[nombre] = 0
     return jsonify({"mensaje": f"👤 {nombre} se ha unido", "jugadores": jugadores}), 200
 
@@ -95,3 +99,4 @@ if __name__ == "__main__":
     print("🚀 Ejecutando Flask en el puerto 5000...")
     port = int(os.environ.get("PORT", 5000))  # Soporte para Render
     socketio.run(app, host="0.0.0.0", port=port)
+

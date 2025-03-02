@@ -7,6 +7,9 @@ function registrarJugador() {
         return;
     }
 
+    // Verificar que el nombre no esté vacío
+    console.log("Nombre del jugador:", nombre); // Verifica que el nombre esté correctamente capturado
+
     // Enviar el nombre al backend para registrar al jugador
     fetch("/registrar", {
         method: "POST",
@@ -15,6 +18,7 @@ function registrarJugador() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log("Respuesta del servidor:", data); // Verifica qué datos se reciben
         if (data.error) {
             alert(data.error); // Si hubo un error (nombre ya en uso), lo mostramos
         } else {
@@ -77,4 +81,3 @@ function verificarRespuesta(boton, seleccion, correcta) {
     // Desactivar todos los botones después de responder
     document.querySelectorAll(".boton-opcion").forEach(btn => btn.disabled = true);
 }
-

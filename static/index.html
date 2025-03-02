@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Concursillo</title>
     <link rel="stylesheet" href="static/style.css">
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
 </head>
 <body>
     <h1>🎉 ¡Bienvenido a Mi Concursillo! 🎉</h1>
-    
+
     <!-- Registro del jugador -->
     <div id="registro">
+        <label for="nombreJugador">Ingresa tu nombre:</label>
         <input type="text" id="nombreJugador" placeholder="Tu nombre">
         <button onclick="registrarJugador()">Unirse</button>
     </div>
@@ -26,4 +29,3 @@
     <script src="static/script.js"></script>
 </body>
 </html>
-
