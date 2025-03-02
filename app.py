@@ -2,7 +2,6 @@ import gevent.monkey
 import os
 import json
 import time
-import threading
 from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
 
@@ -78,19 +77,6 @@ def unirse_a_sala():
 
     return jsonify({"mensaje": f"👤 {nombre} se unió a la sala {sala}", "jugadores": salas[sala]}), 200
 
-# ✅ Ruta para actualizar puntuaciones
-@app.route("/puntuacion", methods=["POST"])
-def actualizar_puntuacion():
-    datos = request.json
-    nombre = datos.get("nombre")
-    puntos = datos.get("puntos", 0)
-
-    if nombre not in jugadores:
-        return jsonify({"error": "Jugador no encontrado"}), 404
-
-    jugadores[nombre] += puntos
-    return jsonify({"mensaje": f"🏆 {nombre} ahora tiene {jugadores[nombre]} puntos"})
-
 # ✅ WebSocket para mensajes en el chat
 @socketio.on("mensaje")
 def manejar_mensaje(datos):
@@ -107,36 +93,6 @@ def actualizar_puntuacion_socket(data):
     if nombre in jugadores:
         jugadores[nombre] += puntos
         socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
-
-# ✅ Temporizador para responder preguntas
-def iniciar_temporizador(segundos):
-    print(f"⏳ Tiempo límite: {segundos} segundos")
-    time.sleep(segundos)
-    print("⏰ ¡Tiempo terminado!")
-
-# ✅ Ruta para iniciar un temporizador
-@app.route("/temporizador", methods=["POST"])
-def iniciar_temporizador_api():
-    datos = request.json
-    segundos = datos.get("segundos", 30)
-
-    t = threading.Thread(target=iniciar_temporizador, args=(segundos,))
-    t.start()
-
-    return jsonify({"mensaje": f"⏳ Temporizador de {segundos} segundos iniciado"})
-
-# ✅ Evento para actualizar la puntuación de los jugadores
-@socketio.on("actualizar_puntuacion_jugador")
-def actualizar_puntuacion_jugador(data):
-    nombre = data["nombre"]
-    puntos = data["puntos"]
-
-    # Verificar si el jugador existe
-    if nombre in jugadores:
-        jugadores[nombre] += puntos
-        socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
-    else:
-        socketio.emit("error", {"mensaje": f"Jugador {nombre} no encontrado"})
 
 # ✅ Evento para mostrar la pregunta
 @socketio.on("mostrar_pregunta")
