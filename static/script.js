@@ -56,7 +56,6 @@ function unirseSala() {
             alert(data.mensaje);
             document.getElementById("unirseSala").style.display = "none"; // Ocultamos la sección de unir a sala
             document.getElementById("pregunta-container").style.display = "block"; // Mostramos la sección de preguntas
-            cargarPregunta(); // Llamamos a la función para cargar la pregunta
         }
     })
     .catch(error => console.error("❌ Error al unirse a la sala:", error)); // En caso de error, lo mostramos
@@ -103,10 +102,6 @@ function mostrarPregunta(pregunta) {
 function verificarRespuesta(boton, opcion, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
-    // Desactivar todos los botones después de que uno haya sido seleccionado
-    let botones = document.querySelectorAll(".boton-opcion");
-    botones.forEach(b => b.disabled = true);
-
     // Comprobamos si la opción seleccionada es la correcta
     if (seleccion === correcta) {
         mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
@@ -122,5 +117,14 @@ function verificarRespuesta(boton, opcion, seleccion, correcta) {
     socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
 }
 
+// Escuchar evento de nueva pregunta
+socket.on("nueva_pregunta", (data) => {
+    mostrarPregunta(data);
+});
+
+// Escuchar evento de tiempo terminado
+socket.on("tiempo_terminado", (data) => {
+    alert(data.mensaje); // Mostrar el mensaje cuando se termine el tiempo
+});
 
     
