@@ -26,8 +26,9 @@ def cargar_preguntas():
 
 preguntas = cargar_preguntas()
 
-# 📌 Diccionario para almacenar jugadores y puntuaciones
+# Diccionario para almacenar jugadores y puntuaciones
 jugadores = {}
+salas = {}  # Diccionario para almacenar salas y jugadores
 presentador = "Mario"  # Solo el presentador puede controlar el juego
 
 # ✅ Ruta principal (Carga la interfaz web)
@@ -46,17 +47,36 @@ def registrar_jugador():
     datos = request.json
     nombre = datos.get("nombre")
 
-    # Verificamos si el nombre es válido
     if not nombre:
         return jsonify({"error": "Nombre inválido"}), 400
-
-    # Verificamos si el nombre ya está en uso
     if nombre in jugadores:
         return jsonify({"error": "El nombre ya está en uso"}), 400
 
-    # Registramos al jugador y asignamos puntuación inicial
     jugadores[nombre] = 0
     return jsonify({"mensaje": f"👤 {nombre} se ha unido", "jugadores": jugadores}), 200
+
+# ✅ Ruta para unirse a una sala
+@app.route("/unirse_sala", methods=["POST"])
+def unirse_a_sala():
+    datos = request.json
+    nombre = datos.get("nombre")
+    sala = datos.get("sala")
+    
+    if not nombre or not sala:
+        return jsonify({"error": "Nombre o sala inválidos"}), 400
+
+    # Verificar si la sala existe
+    if sala not in salas:
+        salas[sala] = []
+
+    # Verificar si el jugador ya está en la sala
+    if nombre in salas[sala]:
+        return jsonify({"error": "Jugador ya está en la sala"}), 400
+
+    # Agregar al jugador en la sala
+    salas[sala].append(nombre)
+
+    return jsonify({"mensaje": f"👤 {nombre} se unió a la sala {sala}", "jugadores": salas[sala]}), 200
 
 # ✅ Ruta para actualizar puntuaciones
 @app.route("/puntuacion", methods=["POST"])
@@ -76,6 +96,17 @@ def actualizar_puntuacion():
 def manejar_mensaje(datos):
     print(f"💬 Mensaje recibido: {datos}")
     socketio.emit("mensaje", datos)  # Reenviar mensaje a todos los jugadores
+
+# ✅ WebSocket para actualizar las puntuaciones en tiempo real
+@socketio.on("actualizar_puntuacion")
+def actualizar_puntuacion_socket(data):
+    nombre = data["nombre"]
+    puntos = data["puntos"]
+    
+    # Actualizar las puntuaciones
+    if nombre in jugadores:
+        jugadores[nombre] += puntos
+        socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
 
 # ✅ Temporizador para responder preguntas
 def iniciar_temporizador(segundos):
@@ -99,4 +130,3 @@ if __name__ == "__main__":
     print("🚀 Ejecutando Flask en el puerto 5000...")
     port = int(os.environ.get("PORT", 5000))  # Soporte para Render
     socketio.run(app, host="0.0.0.0", port=port)
-

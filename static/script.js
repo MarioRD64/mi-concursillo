@@ -1,3 +1,6 @@
+const socket = io();  // Conectar a Socket.IO
+
+// Función para registrar un jugador
 function registrarJugador() {
     let nombre = document.getElementById("nombreJugador").value.trim();
 
@@ -16,16 +19,47 @@ function registrarJugador() {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(data.error); // Si hubo un error (nombre ya en uso), lo mostramos
+            alert(data.error); // Si hubo un error, lo mostramos
         } else {
-            document.getElementById("registro").style.display = "none"; // Oculta la sección de registro
-            document.getElementById("pregunta-container").style.display = "block"; // Muestra la sección de preguntas
-            cargarPregunta(); // Llama a la función para cargar la pregunta
+            document.getElementById("registro").style.display = "none"; // Ocultamos la sección de registro
+            document.getElementById("pregunta-container").style.display = "block"; // Mostramos la sección de preguntas
+            cargarPregunta(); // Llamamos a la función para cargar la pregunta
         }
     })
     .catch(error => console.error("❌ Error en el registro:", error)); // En caso de error, lo mostramos
 }
 
+// Función para unirse a una sala
+function unirseSala() {
+    let nombre = document.getElementById("nombreJugador").value.trim();
+    let sala = document.getElementById("nombreSala").value.trim();
+
+    if (!nombre || !sala) {
+        alert("❌ Ingresa tu nombre y el nombre de la sala.");
+        return;
+    }
+
+    // Enviar el nombre y la sala al backend para unirse
+    fetch("/unirse_sala", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: nombre, sala: sala })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error); // Si hubo un error, lo mostramos
+        } else {
+            alert(data.mensaje);
+            document.getElementById("unirseSala").style.display = "none"; // Ocultamos la sección de unir a sala
+            document.getElementById("pregunta-container").style.display = "block"; // Mostramos la sección de preguntas
+            cargarPregunta(); // Llamamos a la función para cargar la pregunta
+        }
+    })
+    .catch(error => console.error("❌ Error al unirse a la sala:", error)); // En caso de error, lo mostramos
+}
+
+// Función para cargar las preguntas
 function cargarPregunta() {
     // Llamamos al backend para obtener las preguntas
     fetch("/preguntas")
@@ -42,40 +76,45 @@ function cargarPregunta() {
         .catch(error => console.error("❌ Error al obtener la pregunta:", error)); // Error al obtener preguntas
 }
 
+// Función para mostrar la pregunta
 function mostrarPregunta(pregunta) {
-    // Establecer el texto de la pregunta
     document.getElementById("textoPregunta").innerText = pregunta.pregunta;
 
-    // Obtener el contenedor donde se mostrarán las opciones
     let opcionesDiv = document.getElementById("opciones");
     opcionesDiv.innerHTML = ""; // Limpiamos cualquier opción anterior
 
     // Crear los botones de las opciones
-    for (let clave in pregunta.opciones) {
-        let opcion = pregunta.opciones[clave];
+    Object.keys(pregunta.opciones).forEach(opcion => {
         let boton = document.createElement("button");
-        boton.innerText = `${clave}: ${opcion}`;
+        boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = () => verificarRespuesta(boton, clave, pregunta.respuesta_correcta); // Comprobamos si la respuesta es correcta
-        opcionesDiv.appendChild(boton); // Agregamos el botón al contenedor
-    }
+        boton.onclick = () => verificarRespuesta(boton, pregunta.opciones[opcion], pregunta.respuesta_correcta);
+        opcionesDiv.appendChild(boton);
+    });
 }
 
+// Función para verificar la respuesta
 function verificarRespuesta(boton, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
-    // Comprobamos si la selección es correcta
     if (seleccion === correcta) {
-        mensaje.innerText = "✅ ¡Correcto!"; // Si la respuesta es correcta
+        mensaje.innerText = "✅ ¡Correcto!";
         mensaje.style.color = "green";
-        boton.classList.add("correcto"); // Cambiamos el color del botón a verde
+        boton.classList.add("correcto");
     } else {
-        mensaje.innerText = `❌ Incorrecto, la respuesta era: ${correcta}`; // Si la respuesta es incorrecta
+        mensaje.innerText = `❌ Incorrecto, la respuesta era: ${correcta}`;
         mensaje.style.color = "red";
-        boton.classList.add("incorrecto"); // Cambiamos el color del botón a rojo
+        boton.classList.add("incorrecto");
     }
+
+    // Emitir la puntuación al servidor
+    socket.emit("actualizar_puntuacion", { nombre: jugador, puntos: seleccion === correcta ? 10 : 0 });
 
     // Desactivar todos los botones después de responder
     document.querySelectorAll(".boton-opcion").forEach(btn => btn.disabled = true);
 }
 
+// Escuchar el evento de puntuación actualizada
+socket.on("puntuacion_actualizada", data => {
+    console.log(`${data.jugador} ahora tiene ${data.puntos} puntos`);
+});
