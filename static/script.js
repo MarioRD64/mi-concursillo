@@ -1,12 +1,11 @@
 const socket = io();  // Conectar a Socket.IO
-let nombreJugador = ""; // Variable global para almacenar el nombre del jugador
 
 // Función para registrar un jugador
 function registrarJugador() {
-    nombreJugador = document.getElementById("nombreJugador").value.trim();
+    let nombre = document.getElementById("nombreJugador").value.trim();
 
     // Verificamos si el nombre está vacío
-    if (!nombreJugador) {
+    if (!nombre) {
         alert("❌ Ingresa tu nombre antes de unirte.");
         return;
     }
@@ -15,7 +14,7 @@ function registrarJugador() {
     fetch("/registrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombreJugador })
+        body: JSON.stringify({ nombre: nombre })
     })
     .then(response => response.json())
     .then(data => {
@@ -89,13 +88,13 @@ function mostrarPregunta(pregunta) {
         let boton = document.createElement("button");
         boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = () => verificarRespuesta(boton, opcion, pregunta.respuesta_correcta, pregunta); // Enviamos la opción seleccionada
+        boton.onclick = () => verificarRespuesta(boton, pregunta.opciones[opcion], pregunta.respuesta_correcta);
         opcionesDiv.appendChild(boton);
     });
 }
 
 // Función para verificar la respuesta
-function verificarRespuesta(boton, seleccion, correcta, pregunta) {
+function verificarRespuesta(boton, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
     if (seleccion === correcta) {
@@ -109,17 +108,9 @@ function verificarRespuesta(boton, seleccion, correcta, pregunta) {
     }
 
     // Emitir la puntuación al servidor
-    socket.emit("verificar_respuesta", { 
-        nombre: nombreJugador, 
-        respuesta: seleccion, 
-        pregunta: pregunta 
-    });
+    socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
 
     // Desactivar todos los botones después de responder
-    document.querySelectorAll(".boton-opcion").forEach(btn => btn.disabled = true);
+    let botones = document.querySelectorAll(".boton-opcion");
+    botones.forEach(b => b.disabled = true);
 }
-
-// Escuchar el evento de puntuación actualizada
-socket.on("puntuacion_actualizada", data => {
-    console.log(`${data.jugador} ahora tiene ${data.puntos} puntos`);
-});
