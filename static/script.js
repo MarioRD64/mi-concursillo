@@ -7,9 +7,6 @@ function registrarJugador() {
         return;
     }
 
-    // Verificar que el nombre no esté vacío
-    console.log("Nombre del jugador:", nombre); // Verifica que el nombre esté correctamente capturado
-
     // Enviar el nombre al backend para registrar al jugador
     fetch("/registrar", {
         method: "POST",
@@ -18,7 +15,6 @@ function registrarJugador() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log("Respuesta del servidor:", data); // Verifica qué datos se reciben
         if (data.error) {
             alert(data.error); // Si hubo un error (nombre ya en uso), lo mostramos
         } else {
@@ -48,20 +44,21 @@ function cargarPregunta() {
 
 function mostrarPregunta(pregunta) {
     // Establecer el texto de la pregunta
-    document.getElementById("textoPregunta").innerText = pregunta.texto;
+    document.getElementById("textoPregunta").innerText = pregunta.pregunta;
 
     // Obtener el contenedor donde se mostrarán las opciones
     let opcionesDiv = document.getElementById("opciones");
     opcionesDiv.innerHTML = ""; // Limpiamos cualquier opción anterior
 
     // Crear los botones de las opciones
-    pregunta.opciones.forEach((opcion, index) => {
+    for (let clave in pregunta.opciones) {
+        let opcion = pregunta.opciones[clave];
         let boton = document.createElement("button");
-        boton.innerText = opcion;
+        boton.innerText = `${clave}: ${opcion}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = () => verificarRespuesta(boton, opcion, pregunta.respuesta); // Comprobamos si la respuesta es correcta
+        boton.onclick = () => verificarRespuesta(boton, clave, pregunta.respuesta_correcta); // Comprobamos si la respuesta es correcta
         opcionesDiv.appendChild(boton); // Agregamos el botón al contenedor
-    });
+    }
 }
 
 function verificarRespuesta(boton, seleccion, correcta) {
@@ -81,3 +78,4 @@ function verificarRespuesta(boton, seleccion, correcta) {
     // Desactivar todos los botones después de responder
     document.querySelectorAll(".boton-opcion").forEach(btn => btn.disabled = true);
 }
+
