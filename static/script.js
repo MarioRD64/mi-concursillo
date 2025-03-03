@@ -1,5 +1,3 @@
-const socket = io();  // Conectar a Socket.IO
-
 let nombreJugador = "";  // Variable global para almacenar el nombre del jugador
 
 // Función para registrar un jugador
@@ -93,17 +91,17 @@ function mostrarPregunta(pregunta) {
         boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
         boton.onclick = function() {
-            verificarRespuesta(boton, opcion, pregunta.opciones[opcion], pregunta.respuesta_correcta);
+            verificarRespuesta(boton, opcion,.opciones[opcion], pregunta.respuesta_correcta);
         };
         opcionesDiv.appendChild(boton);
     });
 }
 
-// Escuchar evento de nueva pregunta
-socket.on("nueva_pregunta", (data) => {
-    console.log("Pregunta recibida: ", data); // Agregamos un log para asegurarnos de que se recibe la pregunta
-    mostrarPregunta(data);
-});
+// // Escuchar evento de nueva pregunta
+// socket.on("nueva_pregunta", (data) => {
+//     console.log("Pregunta recibida: ", data); // Agregamos un log para asegurarnos de que se recibe la pregunta
+//     mostrarPregunta(data);
+// });
 
 // Función para verificar la respuesta
 function verificarRespuesta(boton, opcion, seleccion, correcta) {
@@ -119,7 +117,4 @@ function verificarRespuesta(boton, opcion, seleccion, correcta) {
         mensaje.style.color = "red";
         boton.classList.add("incorrecto");
     }
-
-    // Emitir la puntuación al servidor
-    socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
 }
