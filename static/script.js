@@ -1,11 +1,13 @@
 const socket = io();  // Conectar a Socket.IO
 
+let nombreJugador = "";  // Variable global para almacenar el nombre del jugador
+
 // Función para registrar un jugador
 function registrarJugador() {
-    let nombre = document.getElementById("nombreJugador").value.trim();
+    nombreJugador = document.getElementById("nombreJugador").value.trim();
 
     // Verificamos si el nombre está vacío
-    if (!nombre) {
+    if (!nombreJugador) {
         alert("❌ Ingresa tu nombre antes de unirte.");
         return;
     }
@@ -14,16 +16,16 @@ function registrarJugador() {
     fetch("/registrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombre })
+        body: JSON.stringify({ nombre: nombreJugador })
     })
     .then(response => response.json())
     .then(data => {
+        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error); // Si hubo un error, lo mostramos
         } else {
             document.getElementById("registro").style.display = "none"; // Ocultamos la sección de registro
-            document.getElementById("pregunta-container").style.display = "block"; // Mostramos la sección de preguntas
-            cargarPregunta(); // Llamamos a la función para cargar la pregunta
+            document.getElementById("unirseSala").style.display = "block"; // Mostramos la sección de unirse a sala
         }
     })
     .catch(error => console.error("❌ Error en el registro:", error)); // En caso de error, lo mostramos
@@ -31,10 +33,10 @@ function registrarJugador() {
 
 // Función para unirse a una sala
 function unirseSala() {
-    let nombre = document.getElementById("nombreJugador").value.trim();
+    nombreJugador = document.getElementById("nombreJugador").value.trim();
     let sala = document.getElementById("nombreSala").value.trim();
 
-    if (!nombre || !sala) {
+    if (!nombreJugador || !sala) {
         alert("❌ Ingresa tu nombre y el nombre de la sala.");
         return;
     }
@@ -43,10 +45,11 @@ function unirseSala() {
     fetch("/unirse_sala", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombre, sala: sala })
+        body: JSON.stringify({ nombre: nombreJugador, sala: sala })
     })
     .then(response => response.json())
     .then(data => {
+        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error); // Si hubo un error, lo mostramos
         } else {
@@ -65,6 +68,7 @@ function cargarPregunta() {
     fetch("/preguntas")
         .then(response => response.json())
         .then(data => {
+            console.log(data); // Verificar que las preguntas están cargando correctamente
             if (data.length > 0) {
                 // Seleccionamos una pregunta aleatoria
                 let preguntaAleatoria = data[Math.floor(Math.random() * data.length)];
@@ -88,29 +92,34 @@ function mostrarPregunta(pregunta) {
         let boton = document.createElement("button");
         boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = () => verificarRespuesta(boton, opcion, pregunta.respuesta_correcta);
+        boton.onclick = function() {
+            verificarRespuesta(boton, opcion, pregunta.opciones[opcion], pregunta.respuesta_correcta);
+        };
         opcionesDiv.appendChild(boton);
     });
 }
 
+// Escuchar evento de nueva pregunta
+socket.on("nueva_pregunta", (data) => {
+    console.log("Pregunta recibida: ", data); // Agregamos un log para asegurarnos de que se recibe la pregunta
+    mostrarPregunta(data);
+});
+
 // Función para verificar la respuesta
-function verificarRespuesta(boton, seleccion, correcta) {
+function verificarRespuesta(boton, opcion, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
+    // Comprobamos si la opción seleccionada es la correcta
     if (seleccion === correcta) {
-        mensaje.innerText = "✅ ¡Correcto!";
+        mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
         mensaje.style.color = "green";
         boton.classList.add("correcto");
     } else {
-        mensaje.innerText = `❌ Incorrecto, la respuesta era: ${correcta}`;
+        mensaje.innerText = "❌ Incorrecto"; // Solo mostrar "Incorrecto" sin decir la respuesta correcta
         mensaje.style.color = "red";
         boton.classList.add("incorrecto");
     }
 
     // Emitir la puntuación al servidor
     socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
-
-    // Desactivar todos los botones después de responder
-    let botones = document.querySelectorAll(".boton-opcion");
-    botones.forEach(b => b.disabled = true);
 }
