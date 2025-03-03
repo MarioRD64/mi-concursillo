@@ -1,125 +1,116 @@
-const socket = io();  // Conectar a Socket.IO
+import gevent.monkey
+import os
+import json
+import time
+import threading
+from flask import Flask, jsonify, request, send_from_directory
+from flask_socketio import SocketIO
 
-let nombreJugador = "";  // Variable global para almacenar el nombre del jugador
+# 🟢 Parcheamos para usar gevent antes de importar otras librerías
+gevent.monkey.patch_all()
 
-// Función para registrar un jugador
-function registrarJugador() {
-    nombreJugador = document.getElementById("nombreJugador").value.trim();
+print("✅ Flask está iniciando...")  # 🔥 Mensaje de prueba
 
-    // Verificamos si el nombre está vacío
-    if (!nombreJugador) {
-        alert("❌ Ingresa tu nombre antes de unirte.");
-        return;
-    }
+# Inicializamos Flask y WebSockets
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-    // Enviar el nombre al backend para registrar al jugador
-    fetch("/registrar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombreJugador })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log(data); // Verificar la respuesta del servidor
-        if (data.error) {
-            alert(data.error); // Si hubo un error, lo mostramos
-        } else {
-            document.getElementById("registro").style.display = "none"; // Ocultamos la sección de registro
-            document.getElementById("unirseSala").style.display = "block"; // Mostramos la sección de unirse a sala
-        }
-    })
-    .catch(error => console.error("❌ Error en el registro:", error)); // En caso de error, lo mostramos
-}
+# 📌 Cargamos preguntas desde un archivo JSON
+def cargar_preguntas():
+    try:
+        with open("preguntas.json", "r", encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print("⚠️ Error: No se encontró el archivo preguntas.json")
+        return []
 
-// Función para unirse a una sala
-function unirseSala() {
-    nombreJugador = document.getElementById("nombreJugador").value.trim();
-    let sala = document.getElementById("nombreSala").value.trim();
+preguntas = cargar_preguntas()
 
-    if (!nombreJugador || !sala) {
-        alert("❌ Ingresa tu nombre y el nombre de la sala.");
-        return;
-    }
+# Diccionario para almacenar jugadores y puntuaciones
+jugadores = {}
+salas = {}  # Diccionario para almacenar salas y jugadores
 
-    // Enviar el nombre y la sala al backend para unirse
-    fetch("/unirse_sala", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombreJugador, sala: sala })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log(data); // Verificar la respuesta del servidor
-        if (data.error) {
-            alert(data.error); // Si hubo un error, lo mostramos
-        } else {
-            alert(data.mensaje);
-            document.getElementById("unirseSala").style.display = "none"; // Ocultamos la sección de unir a sala
-            document.getElementById("pregunta-container").style.display = "block"; // Mostramos la sección de preguntas
-            cargarPregunta(); // Llamamos a la función para cargar la pregunta
-        }
-    })
-    .catch(error => console.error("❌ Error al unirse a la sala:", error)); // En caso de error, lo mostramos
-}
+# ✅ Ruta principal (Carga la interfaz web)
+@app.route('/')
+def home():
+    return send_from_directory("static", "index.html")
 
-// Función para cargar las preguntas
-function cargarPregunta() {
-    // Llamamos al backend para obtener las preguntas
-    fetch("/preguntas")
-        .then(response => response.json())
-        .then(data => {
-            console.log(data); // Verificar que las preguntas están cargando correctamente
-            if (data.length > 0) {
-                // Seleccionamos una pregunta aleatoria
-                let preguntaAleatoria = data[Math.floor(Math.random() * data.length)];
-                mostrarPregunta(preguntaAleatoria); // Mostramos la pregunta
-            } else {
-                console.error("⚠️ No hay preguntas disponibles.");
-            }
-        })
-        .catch(error => console.error("❌ Error al obtener la pregunta:", error)); // Error al obtener preguntas
-}
+# ✅ Ruta para obtener todas las preguntas
+@app.route("/preguntas", methods=["GET"])
+def obtener_preguntas():
+    return jsonify(preguntas)
 
-// Función para mostrar la pregunta
-function mostrarPregunta(pregunta) {
-    document.getElementById("textoPregunta").innerText = pregunta.pregunta;
+# ✅ Ruta para registrar un nuevo jugador
+@app.route("/registrar", methods=["POST"])
+def registrar_jugador():
+    datos = request.json
+    nombre = datos.get("nombre")
 
-    let opcionesDiv = document.getElementById("opciones");
-    opcionesDiv.innerHTML = ""; // Limpiamos cualquier opción anterior
+    if not nombre:
+        return jsonify({"error": "Nombre inválido"}), 400
+    if nombre in jugadores:
+        return jsonify({"error": "El nombre ya está en uso"}), 400
 
-    // Crear los botones de las opciones
-    Object.keys(pregunta.opciones).forEach(opcion => {
-        let boton = document.createElement("button");
-        boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
-        boton.classList.add("boton-opcion"); // Agregamos clase CSS para estilo
-        boton.onclick = function() {
-            verificarRespuesta(boton, opcion, pregunta.opciones[opcion], pregunta.respuesta_correcta);
-        };
-        opcionesDiv.appendChild(boton);
-    });
-}
+    jugadores[nombre] = 0
+    return jsonify({"mensaje": f"👤 {nombre} se ha unido", "jugadores": jugadores}), 200
 
-// Escuchar evento de nueva pregunta
-socket.on("nueva_pregunta", (data) => {
-    console.log("Pregunta recibida: ", data); // Agregamos un log para asegurarnos de que se recibe la pregunta
-    mostrarPregunta(data);
-});
+# ✅ Ruta para unirse a una sala
+@app.route("/unirse_sala", methods=["POST"])
+def unirse_a_sala():
+    datos = request.json
+    nombre = datos.get("nombre")
+    sala = datos.get("sala")
+    
+    if not nombre or not sala:
+        return jsonify({"error": "Nombre o sala inválidos"}), 400
 
-// Función para verificar la respuesta
-function verificarRespuesta(boton, opcion, seleccion, correcta) {
-    let mensaje = document.getElementById("mensaje");
+    if sala not in salas:
+        salas[sala] = []
 
-    // Comprobamos si la opción seleccionada es la correcta
-    if (seleccion === correcta) {
-        mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
-        mensaje.style.color = "green";
-        boton.classList.add("correcto");
-    } else {
-        mensaje.innerText = "❌ Incorrecto"; // Solo mostrar "Incorrecto" sin decir la respuesta correcta
-        mensaje.style.color = "red";
-        boton.classList.add("incorrecto");
-    }
+    if nombre in salas[sala]:
+        return jsonify({"error": "Jugador ya está en la sala"}), 400
 
-    // Emitir la puntuación al servidor
-    socket.emit("actualizar_puntuacion", { nombre: nombreJugador, puntos: seleccion === correcta ? 10 : 0 });
-}
+    salas[sala].append(nombre)
+
+    # Enviar una nueva pregunta a los jugadores de la sala
+    if preguntas:
+        pregunta_aleatoria = preguntas[0]  # Se podría hacer aleatorio si se desea
+        socketio.emit("nueva_pregunta", pregunta_aleatoria, room=sala)
+
+    return jsonify({"mensaje": f"👤 {nombre} se unió a la sala {sala}", "jugadores": salas[sala]}), 200
+
+# ✅ Ruta para actualizar puntuaciones
+@app.route("/puntuacion", methods=["POST"])
+def actualizar_puntuacion():
+    datos = request.json
+    nombre = datos.get("nombre")
+    puntos = datos.get("puntos", 0)
+
+    if nombre not in jugadores:
+        return jsonify({"error": "Jugador no encontrado"}), 404
+
+    jugadores[nombre] += puntos
+    return jsonify({"mensaje": f"🏆 {nombre} ahora tiene {jugadores[nombre]} puntos"})
+
+# ✅ WebSocket para actualizar las puntuaciones en tiempo real
+@socketio.on("actualizar_puntuacion")
+def actualizar_puntuacion_socket(data):
+    nombre = data["nombre"]
+    puntos = data["puntos"]
+    
+    if nombre in jugadores:
+        jugadores[nombre] += puntos
+        socketio.emit("puntuacion_actualizada", {"jugador": nombre, "puntos": jugadores[nombre]})
+
+# ✅ Evento para mostrar la pregunta
+@socketio.on("mostrar_pregunta")
+def mostrar_pregunta(data):
+    pregunta = data.get("pregunta")
+    opciones = data.get("opciones")
+    socketio.emit("nueva_pregunta", {"pregunta": pregunta, "opciones": opciones})
+
+# ✅ Inicio del servidor Flask y WebSockets
+if __name__ == "__main__":
+    print("🚀 Ejecutando Flask en el puerto 5000...")
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)
