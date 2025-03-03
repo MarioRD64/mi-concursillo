@@ -8,27 +8,35 @@
 </head>
 <body>
     <h1>🎉 ¡Bienvenido a Mi Concursillo! 🎉</h1>
-    
+
     <!-- Registro del jugador -->
     <div id="registro">
-        <input type="text" id="nombreJugador" placeholder="Tu nombre">
-        <button onclick="registrarJugador()">Unirse</button>
+        <input type="text" id="nombreJugador" placeholder="Escribe tu nombre" />
+        <button onclick="registrarJugador()">Unirme</button>
     </div>
 
-    <!-- Unirse a una sala -->
-    <div id="unirseSala">
-        <input type="text" id="nombreSala" placeholder="Nombre de la sala">
-        <button onclick="unirseSala()">Unirse a la sala</button>
+    <!-- Unirse a una sala o crear una sala -->
+    <div id="unirseSala" style="display:none;">
+        <input type="text" id="nombreSala" placeholder="Código de sala" />
+        <button onclick="unirseSala()">Unirme a sala</button>
+        <button onclick="crearSala()">Crear sala</button>
     </div>
 
-    <!-- Sección de preguntas (oculta al inicio) -->
-    <div id="pregunta-container" style="display: none;">
+    <!-- Parte de la sala de espera -->
+    <div id="salaEspera" style="display:none;">
+        <h3>Esperando jugadores...</h3>
+        <div id="jugadoresSala"></div>
+        <button id="iniciarJuego" onclick="iniciarJuego()" style="display:none;">Iniciar juego</button>
+    </div>
+
+    <!-- Parte de las preguntas (oculta al inicio) -->
+    <div id="pregunta-container" style="display:none;">
         <h2 id="textoPregunta"></h2>
         <div id="opciones"></div>
+        <p id="mensaje"></p>
     </div>
 
-    <p id="mensaje"></p>
-
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="static/script.js"></script>
 </body>
 </html>
