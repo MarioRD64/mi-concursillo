@@ -4,3 +4,6 @@ flask-cors
 gunicorn 
 gevent 
 gevent-websocket 
+flask-sqlalchemy
+flask-dance
+
