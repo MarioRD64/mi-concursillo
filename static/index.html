@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Concursillo</title>
     <link rel="stylesheet" href="static/style.css">
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script> <!-- Añadir Socket.IO -->
 </head>
 <body>
     <h1>🎉 ¡Bienvenido a Mi Concursillo! 🎉</h1>
 
     <!-- Registro del jugador -->
     <div id="registro">
-        <input type="text" id="nombreJugador" placeholder="Escribe tu nombre" />
+        <input type="text" id="nombreJugador" placeholder="Escribe tu nombre">
         <button onclick="registrarJugador()">Unirme</button>
     </div>
 
-    <!-- Unirse a una sala o crear una sala -->
+    <!-- Unirse a una sala -->
     <div id="unirseSala" style="display:none;">
-        <input type="text" id="nombreSala" placeholder="Código de sala" />
+        <input type="text" id="nombreSala" placeholder="Código de sala">
         <button onclick="unirseSala()">Unirme a sala</button>
         <button onclick="crearSala()">Crear sala</button>
     </div>
@@ -29,14 +31,13 @@
         <button id="iniciarJuego" onclick="iniciarJuego()" style="display:none;">Iniciar juego</button>
     </div>
 
-    <!-- Parte de las preguntas (oculta al inicio) -->
+    <!-- Parte de las preguntas -->
     <div id="pregunta-container" style="display:none;">
         <h2 id="textoPregunta"></h2>
         <div id="opciones"></div>
         <p id="mensaje"></p>
     </div>
 
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="static/script.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-
+const socket = io("http://127.0.0.1:5000"); // Cambiar WebSocket por Socket.IO
 
 let nombreJugador = '';
 let codigoSala = '';
@@ -19,6 +19,7 @@ function registrarJugador() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error);
         } else {
@@ -70,6 +71,7 @@ function unirseSala() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error);
         } else {
@@ -111,10 +113,19 @@ function generarCodigoSala() {
 
 // Función para iniciar el juego cuando haya suficientes jugadores
 function iniciarJuego() {
- 
+    socket.emit("iniciar_partida", { sala: codigoSala });
 }
 
+// Escuchar el evento de "jugador se unió"
+socket.on("jugador_unido", function(data) {
+    actualizarJugadoresSala(data.jugadores);
+});
 
+// Escuchar el evento de "inicio de partida"
+socket.on("inicio_partida", function() {
+    document.getElementById("salaEspera").style.display = "none";
+    cargarPregunta();
+});
 
 // Función para cargar una pregunta
 function cargarPregunta() {
@@ -143,11 +154,12 @@ function mostrarPregunta(pregunta) {
 function verificarRespuesta(boton, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
+    // Comprobamos si la opción seleccionada es la correcta
     if (seleccion === correcta) {
-        mensaje.innerText = "✅ ¡Correcto!";
+        mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
         mensaje.style.color = "green";
     } else {
-        mensaje.innerText = `❌ Incorrecto, la respuesta era: ${correcta}`;
+        mensaje.innerText = "❌ Incorrecto"; // Solo mostrar "Incorrecto" sin decir la respuesta correcta
         mensaje.style.color = "red";
     }
 
