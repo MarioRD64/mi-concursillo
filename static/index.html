@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Concursillo</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="static/style.css"> <!-- Estilos CSS -->
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script> <!-- Añadir Socket.IO -->
 </head>
 <body>
@@ -15,6 +15,26 @@
     <div id="registro">
         <input type="text" id="nombreJugador" placeholder="Escribe tu nombre">
         <button onclick="registrarJugador()">Unirme</button>
+    </div>
+
+    <!-- Registro con Google -->
+    <div id="registroGoogle" style="display:none;">
+        <a href="{{ url_for('google.login') }}" class="btn btn-google">Iniciar sesión con Google</a>
+    </div>
+
+    <!-- Botón para registrarse con correo y contraseña -->
+    <div>
+        <button onclick="mostrarRegistroEmail()">Registrarse con correo</button>
+    </div>
+
+    <!-- Registro con correo y contraseña -->
+    <div id="registroEmail" style="display:none;">
+        <h3>Regístrate con tu correo electrónico y contraseña</h3>
+        <form id="formRegistro">
+            <input type="email" id="correo" placeholder="Correo electrónico" required>
+            <input type="password" id="contraseña" placeholder="Contraseña" required>
+            <button type="submit">Registrarse</button>
+        </form>
     </div>
 
     <!-- Unirse a una sala -->
@@ -38,6 +58,54 @@
         <p id="mensaje"></p>
     </div>
 
+    <!-- Script JS -->
     <script src="static/script.js"></script>
+
+    <style>
+        /* Estilo para el botón de Google */
+        .btn-google {
+            display: inline-block;
+            background-color: #4285F4;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .btn-google:hover {
+            background-color: #357ae8;
+        }
+
+        /* Estilos para el formulario de correo y contraseña */
+        #formRegistro input {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #formRegistro button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #formRegistro button:hover {
+            background-color: #45a049;
+        }
+    </style>
+
+    <script>
+        // Función para mostrar el formulario de registro con correo
+        function mostrarRegistroEmail() {
+            document.getElementById('registroGoogle').style.display = 'none';  // Ocultar Google
+            document.getElementById('registroEmail').style.display = 'block';  // Mostrar formulario de correo
+        }
+    </script>
 </body>
 </html>
