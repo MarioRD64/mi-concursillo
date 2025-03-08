@@ -153,15 +153,22 @@ def registrar_jugador():
 def crear_sala():
     datos = request.json
     nombre = datos.get("nombre")
+
+    # Generar un código aleatorio de 6 caracteres
     codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-    if codigo_sala in salas:
-        return jsonify({"error": "La sala ya existe, intenta crear otra"}), 400
+    # Asegurar que la sala no exista (poco probable, pero prevenimos)
+    while codigo_sala in salas:
+        codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-    salas[codigo_sala] = [nombre]
+    salas[codigo_sala] = [nombre]  # Guardar al creador como el primer jugador
     socketio.emit("jugador_unido", {"jugadores": salas[codigo_sala], "sala": codigo_sala})
 
-    return jsonify({"mensaje": f"Sala {codigo_sala} creada", "jugadores": salas[codigo_sala]}), 200
+    return jsonify({
+        "mensaje": f"Sala {codigo_sala} creada",
+        "codigo_sala": codigo_sala,  # 📢 Enviar el código de la sala al frontend
+        "jugadores": salas[codigo_sala]
+    }), 200
 
 # ✅ Ruta para unirse a una sala
 @app.route("/unirse_sala", methods=["POST"])

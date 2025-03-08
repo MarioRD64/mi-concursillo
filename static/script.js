@@ -1,4 +1,4 @@
-const socket = io("http://127.0.0.1:5000"); // Cambiar WebSocket por Socket.IO
+const socket = io("http://127.0.0.1:5000");
 
 let nombreJugador = '';
 let codigoSala = '';
@@ -19,7 +19,6 @@ function registrarJugador() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error);
         } else {
@@ -32,24 +31,19 @@ function registrarJugador() {
 
 // Función para crear una sala
 function crearSala() {
-    const codigo = generarCodigoSala();
-    codigoSala = codigo;
-
-    // Crear la sala en el backend
     fetch("/crear_sala", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nombreJugador, sala: codigo })
+        body: JSON.stringify({ nombre: nombreJugador })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
             alert(data.error);
         } else {
-            // Mostrar sala de espera
-            document.getElementById("unirseSala").style.display = "none";
-            document.getElementById("salaEspera").style.display = "block";
-            actualizarJugadoresSala(data.jugadores);
+            codigoSala = data.codigo_sala;
+            mostrarSalaEspera(data.jugadores);
+            mostrarCodigoSala(codigoSala);
         }
     })
     .catch(error => console.error("❌ Error al crear la sala:", error));
@@ -71,20 +65,31 @@ function unirseSala() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data); // Verificar la respuesta del servidor
         if (data.error) {
             alert(data.error);
         } else {
-            // Unirse a la sala y actualizar la pantalla
-            document.getElementById("unirseSala").style.display = "none";
-            document.getElementById("salaEspera").style.display = "block";
-            actualizarJugadoresSala(data.jugadores);
+            codigoSala = sala;
+            mostrarSalaEspera(data.jugadores);
         }
     })
     .catch(error => console.error("❌ Error al unirse a la sala:", error));
 }
 
-// Actualiza la lista de jugadores en la sala
+// Función para mostrar la sala de espera
+function mostrarSalaEspera(jugadores) {
+    document.getElementById("unirseSala").style.display = "none";
+    document.getElementById("salaEspera").style.display = "block";
+    actualizarJugadoresSala(jugadores);
+}
+
+// Mostrar código de sala en la UI
+function mostrarCodigoSala(codigo) {
+    let codigoElemento = document.createElement("p");
+    codigoElemento.innerHTML = `Código de sala: <strong>${codigo}</strong>`;
+    document.getElementById("salaEspera").prepend(codigoElemento);
+}
+
+// Función para actualizar la lista de jugadores en la sala
 function actualizarJugadoresSala(jugadores) {
     let listaJugadores = document.getElementById("jugadoresSala");
     listaJugadores.innerHTML = '';
@@ -95,39 +100,25 @@ function actualizarJugadoresSala(jugadores) {
         listaJugadores.appendChild(jugadorDiv);
     });
 
-    // Si soy el creador de la sala, puedo iniciar el juego
     if (jugadores[0] === nombreJugador) {
         document.getElementById("iniciarJuego").style.display = "block";
     }
 }
 
-// Generar un código aleatorio para la sala
-function generarCodigoSala() {
-    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let codigo = '';
-    for (let i = 0; i < 6; i++) {
-        codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-    }
-    return codigo;
-}
-
-// Función para iniciar el juego cuando haya suficientes jugadores
+// Función para iniciar el juego
 function iniciarJuego() {
     socket.emit("iniciar_partida", { sala: codigoSala });
 }
 
-// Escuchar el evento de "jugador se unió"
-socket.on("jugador_unido", function(data) {
-    actualizarJugadoresSala(data.jugadores);
-});
+// Escuchar WebSockets
+socket.on("jugador_unido", (data) => actualizarJugadoresSala(data.jugadores));
 
-// Escuchar el evento de "inicio de partida"
-socket.on("inicio_partida", function() {
+socket.on("inicio_partida", () => {
     document.getElementById("salaEspera").style.display = "none";
     cargarPregunta();
 });
 
-// Función para cargar una pregunta
+// Función para cargar y mostrar preguntas
 function cargarPregunta() {
     fetch("/preguntas")
         .then(response => response.json())
@@ -141,28 +132,28 @@ function mostrarPregunta(pregunta) {
     document.getElementById("textoPregunta").innerText = pregunta.pregunta;
 
     let opcionesDiv = document.getElementById("opciones");
-    opcionesDiv.innerHTML = ""; // Limpiar opciones previas
+    opcionesDiv.innerHTML = "";
 
     Object.keys(pregunta.opciones).forEach(opcion => {
         let boton = document.createElement("button");
+        boton.classList.add("boton-opcion");
         boton.innerText = `${opcion}: ${pregunta.opciones[opcion]}`;
         boton.onclick = () => verificarRespuesta(boton, opcion, pregunta.respuesta_correcta);
         opcionesDiv.appendChild(boton);
     });
 }
 
+// Función para verificar la respuesta
 function verificarRespuesta(boton, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
-    // Comprobamos si la opción seleccionada es la correcta
     if (seleccion === correcta) {
-        mensaje.innerText = "✅ ¡Correcto!"; // Mensaje cuando la respuesta es correcta
+        mensaje.innerText = "✅ ¡Correcto!";
         mensaje.style.color = "green";
     } else {
-        mensaje.innerText = "❌ Incorrecto"; // Solo mostrar "Incorrecto" sin decir la respuesta correcta
+        mensaje.innerText = "❌ Incorrecto";
         mensaje.style.color = "red";
     }
 
-    let botones = document.querySelectorAll(".boton-opcion");
-    botones.forEach(b => b.disabled = true);
+    document.querySelectorAll(".boton-opcion").forEach(b => b.disabled = true);
 }
