@@ -1,23 +1,21 @@
 import gevent.monkey
 import os
 import json
-import time
-import threading
 import random
 import string
-from flask import Flask, jsonify, request, send_from_directory, redirect, url_for, session
-from flask_socketio import SocketIO
+from flask import Flask, jsonify, request, send_from_directory, redirect, url_for
+from flask_socketio import SocketIO, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_dance.contrib.google import make_google_blueprint, google
 
-# 🟢 Parcheamos para usar gevent antes de importar otras librerías
+# 🟢 Parcheamos gevent antes de importar otras librerías
 gevent.monkey.patch_all()
 
-print("✅ Flask está iniciando...")  # 🔥 Mensaje de prueba
+print("✅ Flask está iniciando...")
 
-# Inicializamos Flask y WebSockets
+# Inicializar Flask y WebSockets
 app = Flask(__name__)
 app.secret_key = "super_secreta"  # Cambia esto por una clave segura
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///usuarios.db"
@@ -58,7 +56,6 @@ def cargar_preguntas():
         return []
 
 preguntas = cargar_preguntas()
-jugadores = {}
 salas = {}
 
 # 📌 Cargar usuario en sesión
@@ -101,23 +98,6 @@ def login():
         return jsonify({"mensaje": "✅ Inicio de sesión exitoso"}), 200
     return jsonify({"error": "Credenciales incorrectas"}), 401
 
-# ✅ Ruta de inicio de sesión con Google
-@app.route("/login/google")
-def google_login():
-    if not google.authorized:
-        return redirect(url_for("google.login"))
-    resp = google.get("/oauth2/v2/userinfo")
-    user_info = resp.json()
-
-    usuario = User.query.filter_by(email=user_info["email"]).first()
-    if not usuario:
-        usuario = User(email=user_info["email"], google_id=user_info["id"])
-        db.session.add(usuario)
-        db.session.commit()
-
-    login_user(usuario)
-    return redirect(url_for("home"))
-
 # ✅ Ruta de cierre de sesión
 @app.route("/logout")
 @login_required
@@ -136,18 +116,6 @@ def perfil():
 def obtener_preguntas():
     return jsonify(preguntas)
 
-# ✅ Ruta para registrar un nuevo jugador en una partida
-@app.route("/registrar", methods=["POST"])
-def registrar_jugador():
-    datos = request.json
-    nombre = datos.get("nombre")
-
-    if not nombre or nombre in jugadores:
-        return jsonify({"error": "Nombre inválido o en uso"}), 400
-
-    jugadores[nombre] = 0
-    return jsonify({"mensaje": f"👤 {nombre} se ha unido", "jugadores": jugadores}), 200
-
 # ✅ Ruta para crear una sala
 @app.route("/crear_sala", methods=["POST"])
 def crear_sala():
@@ -157,16 +125,16 @@ def crear_sala():
     # Generar un código aleatorio de 6 caracteres
     codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-    # Asegurar que la sala no exista (poco probable, pero prevenimos)
+    # Asegurar que la sala no exista
     while codigo_sala in salas:
         codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
     salas[codigo_sala] = [nombre]  # Guardar al creador como el primer jugador
-    socketio.emit("jugador_unido", {"jugadores": salas[codigo_sala], "sala": codigo_sala})
+    print(f"📢 Sala creada: {codigo_sala} por {nombre}")
 
     return jsonify({
         "mensaje": f"Sala {codigo_sala} creada",
-        "codigo_sala": codigo_sala,  # 📢 Enviar el código de la sala al frontend
+        "codigo_sala": codigo_sala,
         "jugadores": salas[codigo_sala]
     }), 200
 
@@ -177,27 +145,51 @@ def unirse_sala():
     nombre = datos.get("nombre")
     sala = datos.get("sala")
 
-    if sala not in salas or nombre in salas[sala]:
-        return jsonify({"error": "Sala no encontrada o nombre en uso"}), 400
+    if sala not in salas:
+        return jsonify({"error": "❌ Sala no encontrada"}), 400
+
+    if nombre in salas[sala]:
+        return jsonify({"error": "❌ Nombre en uso"}), 400
 
     salas[sala].append(nombre)
-    socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala})
-    return jsonify({"mensaje": f"{nombre} se unió a la sala {sala}", "jugadores": salas[sala]}), 200
+    print(f"✅ {nombre} se unió a la sala {sala}")
 
-# ✅ WebSocket para mensajes en el chat
-@socketio.on("mensaje")
-def manejar_mensaje(datos):
-    print(f"💬 Mensaje recibido: {datos}")
-    socketio.emit("mensaje", datos)
+    # 📢 Emitimos a TODOS en la sala
+    socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala}, room=sala)
 
-# ✅ Evento para iniciar la partida
+    return jsonify({
+        "mensaje": f"{nombre} se unió a la sala {sala}",
+        "jugadores": salas[sala]
+    }), 200
+
+# ✅ Evento WebSocket para unirse a una sala
+@socketio.on("unirse_sala")
+def manejar_unirse_sala(data):
+    nombre = data["nombre"]
+    sala = data["sala"]
+
+    if sala not in salas or nombre in salas[sala]:
+        return  # No hacer nada si la sala no existe o el nombre ya está en uso
+
+    join_room(sala)  # 📌 Unimos al jugador a la sala WebSocket
+    salas[sala].append(nombre)
+    
+    print(f"🟢 {nombre} se unió a {sala} vía WebSocket")
+    
+    socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala}, room=sala)
+
+# ✅ Evento WebSocket para iniciar la partida
 @socketio.on("iniciar_partida")
 def iniciar_partida(data):
     sala = data["sala"]
+    
     if sala not in salas or len(salas[sala]) < 2:
-        socketio.emit("error", {"mensaje": "No hay suficientes jugadores"})
+        socketio.emit("error", {"mensaje": "❌ No hay suficientes jugadores"}, room=sala)
         return
-    socketio.emit("inicio_partida", {"sala": sala})
+
+    print(f"🚀 Partida iniciada en la sala {sala}")
+
+    socketio.emit("inicio_partida", {"sala": sala}, room=sala)
 
 # ✅ Iniciar el servidor
 if __name__ == "__main__":
