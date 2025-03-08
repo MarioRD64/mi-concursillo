@@ -1,33 +1,31 @@
 import gevent.monkey
 import os
 import json
+import time
 import random
 import string
-from flask import Flask, jsonify, request, send_from_directory, redirect, url_for
+from flask import Flask, jsonify, request, send_from_directory, redirect, url_for, session
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_dance.contrib.google import make_google_blueprint, google
 
-# 🟢 Parcheamos gevent antes de importar otras librerías
+# 🟢 Parchear gevent antes de importar otras librerías
 gevent.monkey.patch_all()
 
-print("✅ Flask está iniciando...")
-
-# Inicializar Flask y WebSockets
 app = Flask(__name__)
-app.secret_key = "super_secreta"  # Cambia esto por una clave segura
+app.secret_key = "super_secreta"  # 🔑 Cambia esto por una clave segura
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///usuarios.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Inicializar extensiones
+# 🔹 Inicializar extensiones
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# 📌 Configurar Google OAuth
+# 🔹 Configurar Google OAuth
 google_bp = make_google_blueprint(client_id="TU_CLIENT_ID", client_secret="TU_CLIENT_SECRET", redirect_to="google_login_callback")
 app.register_blueprint(google_bp, url_prefix="/login")
 
@@ -56,7 +54,7 @@ def cargar_preguntas():
         return []
 
 preguntas = cargar_preguntas()
-salas = {}
+salas = {}  # Diccionario para almacenar salas y jugadores
 
 # 📌 Cargar usuario en sesión
 @login_manager.user_loader
@@ -67,49 +65,6 @@ def load_user(user_id):
 @app.route('/')
 def home():
     return send_from_directory("static", "index.html")
-
-# ✅ Ruta de registro con email y contraseña
-@app.route("/registro", methods=["POST"])
-def registro():
-    datos = request.json
-    email = datos.get("email")
-    password = datos.get("password")
-
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "El email ya está registrado"}), 400
-
-    nuevo_usuario = User(email=email)
-    nuevo_usuario.set_password(password)
-    db.session.add(nuevo_usuario)
-    db.session.commit()
-
-    return jsonify({"mensaje": "✅ Registro exitoso"}), 201
-
-# ✅ Ruta de inicio de sesión con email y contraseña
-@app.route("/login", methods=["POST"])
-def login():
-    datos = request.json
-    email = datos.get("email")
-    password = datos.get("password")
-
-    usuario = User.query.filter_by(email=email).first()
-    if usuario and usuario.check_password(password):
-        login_user(usuario)
-        return jsonify({"mensaje": "✅ Inicio de sesión exitoso"}), 200
-    return jsonify({"error": "Credenciales incorrectas"}), 401
-
-# ✅ Ruta de cierre de sesión
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    return jsonify({"mensaje": "✅ Has cerrado sesión"}), 200
-
-# ✅ Ruta protegida para probar autenticación
-@app.route("/perfil")
-@login_required
-def perfil():
-    return jsonify({"usuario": current_user.email})
 
 # ✅ Ruta para obtener todas las preguntas
 @app.route("/preguntas", methods=["GET"])
@@ -125,7 +80,7 @@ def crear_sala():
     # Generar un código aleatorio de 6 caracteres
     codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-    # Asegurar que la sala no exista
+    # Asegurar que la sala no exista (poco probable, pero prevenimos)
     while codigo_sala in salas:
         codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
@@ -169,7 +124,7 @@ def manejar_unirse_sala(data):
     sala = data["sala"]
 
     if sala not in salas or nombre in salas[sala]:
-        return  # No hacer nada si la sala no existe o el nombre ya está en uso
+        return  # Si la sala no existe o el nombre ya está, no hacemos nada
 
     join_room(sala)  # 📌 Unimos al jugador a la sala WebSocket
     salas[sala].append(nombre)
