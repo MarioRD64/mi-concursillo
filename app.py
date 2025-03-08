@@ -11,7 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_dance.contrib.google import make_google_blueprint, google
-from flask_socketio import join_room, leave_room
+
 # 🟢 Parcheamos para usar gevent antes de importar otras librerías
 gevent.monkey.patch_all()
 
@@ -206,78 +206,3 @@ if __name__ == "__main__":
     print("🚀 Ejecutando Flask en el puerto 5000...")
     socketio.run(app, host="0.0.0.0", port=5000)
  
-# ✅ Ruta para crear una sala
-@app.route("/crear_sala", methods=["POST"])
-def crear_sala():
-    datos = request.json
-    nombre = datos.get("nombre")
-
-    # Generar un código aleatorio de 6 caracteres
-    codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-
-    # Asegurar que la sala no exista (poco probable, pero prevenimos)
-    while codigo_sala in salas:
-        codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-
-    salas[codigo_sala] = [nombre]  # Guardar al creador como el primer jugador
-    print(f"📢 Sala creada: {codigo_sala} por {nombre}")
-
-    return jsonify({
-        "mensaje": f"Sala {codigo_sala} creada",
-        "codigo_sala": codigo_sala,  # 📢 Enviar el código de la sala al frontend
-        "jugadores": salas[codigo_sala]
-    }), 200
-
-# ✅ Ruta para unirse a una sala
-@app.route("/unirse_sala", methods=["POST"])
-def unirse_sala():
-    datos = request.json
-    nombre = datos.get("nombre")
-    sala = datos.get("sala")
-
-    if sala not in salas:
-        return jsonify({"error": "❌ Sala no encontrada"}), 400
-
-    if nombre in salas[sala]:
-        return jsonify({"error": "❌ Nombre en uso"}), 400
-
-    salas[sala].append(nombre)
-
-    print(f"✅ {nombre} se unió a la sala {sala}")
-
-    # 📢 Emitimos a TODOS en la sala
-    socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala}, room=sala)
-
-    return jsonify({
-        "mensaje": f"{nombre} se unió a la sala {sala}",
-        "jugadores": salas[sala]
-    }), 200
-
-# ✅ Evento WebSocket para unirse a una sala
-@socketio.on("unirse_sala")
-def manejar_unirse_sala(data):
-    nombre = data["nombre"]
-    sala = data["sala"]
-
-    if sala not in salas or nombre in salas[sala]:
-        return  # Si la sala no existe o el nombre ya está, no hacemos nada
-
-    join_room(sala)  # 📌 Unimos al jugador a la sala WebSocket
-    salas[sala].append(nombre)
-    
-    print(f"🟢 {nombre} se unió a {sala} vía WebSocket")
-    
-    socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala}, room=sala)
-
-# ✅ Evento WebSocket para iniciar la partida
-@socketio.on("iniciar_partida")
-def iniciar_partida(data):
-    sala = data["sala"]
-    
-    if sala not in salas or len(salas[sala]) < 2:
-        socketio.emit("error", {"mensaje": "❌ No hay suficientes jugadores"}, room=sala)
-        return
-
-    print(f"🚀 Partida iniciada en la sala {sala}")
-
-    socketio.emit("inicio_partida", {"sala": sala}, room=sala)
