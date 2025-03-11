@@ -6,34 +6,33 @@ import threading
 import random
 import string
 from flask import Flask, jsonify, request, send_from_directory, redirect, url_for, session
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, join_room
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_dance.contrib.google import make_google_blueprint, google
 
-# 🟢 Parcheamos para usar gevent antes de importar otras librerías
+# 🟢 Parcheamos gevent
 gevent.monkey.patch_all()
 
-print("✅ Flask está iniciando...")  # 🔥 Mensaje de prueba
+print("✅ Flask está iniciando...")
 
-# Inicializamos Flask y WebSockets
+# Inicialización
 app = Flask(__name__)
-app.secret_key = "super_secreta"  # Cambia esto por una clave segura
+app.secret_key = "super_secreta"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///usuarios.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Inicializar extensiones
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# 📌 Configurar Google OAuth
+# Google OAuth
 google_bp = make_google_blueprint(client_id="TU_CLIENT_ID", client_secret="TU_CLIENT_SECRET", redirect_to="google_login_callback")
 app.register_blueprint(google_bp, url_prefix="/login")
 
-# 📌 Modelo de usuario
+# Modelo Usuario
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -41,14 +40,12 @@ class User(db.Model, UserMixin):
     google_id = db.Column(db.String(150), unique=True, nullable=True)
 
     def set_password(self, password):
-        """Encripta la contraseña antes de guardarla en la base de datos."""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """Verifica si la contraseña ingresada es correcta."""
         return check_password_hash(self.password_hash, password)
 
-# 📌 Cargar preguntas desde JSON
+# Preguntas
 def cargar_preguntas():
     try:
         with open("preguntas.json", "r", encoding="utf-8") as file:
@@ -58,20 +55,17 @@ def cargar_preguntas():
         return []
 
 preguntas = cargar_preguntas()
-jugadores = {}
 salas = {}
 
-# 📌 Cargar usuario en sesión
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ✅ Ruta principal (Carga la interfaz web)
+# Rutas web
 @app.route('/')
 def home():
     return send_from_directory("static", "index.html")
 
-# ✅ Ruta de registro con email y contraseña
 @app.route("/registro", methods=["POST"])
 def registro():
     datos = request.json
@@ -88,7 +82,6 @@ def registro():
 
     return jsonify({"mensaje": "✅ Registro exitoso"}), 201
 
-# ✅ Ruta de inicio de sesión con email y contraseña
 @app.route("/login", methods=["POST"])
 def login():
     datos = request.json
@@ -101,7 +94,6 @@ def login():
         return jsonify({"mensaje": "✅ Inicio de sesión exitoso"}), 200
     return jsonify({"error": "Credenciales incorrectas"}), 401
 
-# ✅ Ruta de inicio de sesión con Google
 @app.route("/login/google")
 def google_login():
     if not google.authorized:
@@ -118,91 +110,80 @@ def google_login():
     login_user(usuario)
     return redirect(url_for("home"))
 
-# ✅ Ruta de cierre de sesión
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
     return jsonify({"mensaje": "✅ Has cerrado sesión"}), 200
 
-# ✅ Ruta protegida para probar autenticación
 @app.route("/perfil")
 @login_required
 def perfil():
     return jsonify({"usuario": current_user.email})
 
-# ✅ Ruta para obtener todas las preguntas
 @app.route("/preguntas", methods=["GET"])
 def obtener_preguntas():
     return jsonify(preguntas)
 
-# ✅ Ruta para registrar un nuevo jugador en una partida
-@app.route("/registrar", methods=["POST"])
-def registrar_jugador():
-    datos = request.json
-    nombre = datos.get("nombre")
-
-    if not nombre or nombre in jugadores:
-        return jsonify({"error": "Nombre inválido o en uso"}), 400
-
-    jugadores[nombre] = 0
-    return jsonify({"mensaje": f"👤 {nombre} se ha unido", "jugadores": jugadores}), 200
-
-# ✅ Ruta para crear una sala
+# ✅ Crear sala (HTTP)
 @app.route("/crear_sala", methods=["POST"])
 def crear_sala():
     datos = request.json
     nombre = datos.get("nombre")
-
-    # Generar un código aleatorio de 6 caracteres
     codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-    # Asegurar que la sala no exista (poco probable, pero prevenimos)
     while codigo_sala in salas:
         codigo_sala = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-    salas[codigo_sala] = [nombre]  # Guardar al creador como el primer jugador
-    socketio.emit("jugador_unido", {"jugadores": salas[codigo_sala], "sala": codigo_sala})
+    salas[codigo_sala] = [nombre]
+    print(f"📢 Sala creada: {codigo_sala} por {nombre}")
 
     return jsonify({
         "mensaje": f"Sala {codigo_sala} creada",
-        "codigo_sala": codigo_sala,  # 📢 Enviar el código de la sala al frontend
+        "codigo_sala": codigo_sala,
         "jugadores": salas[codigo_sala]
     }), 200
 
-# ✅ Ruta para unirse a una sala
-@app.route("/unirse_sala", methods=["POST"])
-def unirse_sala():
-    datos = request.json
-    nombre = datos.get("nombre")
-    sala = datos.get("sala")
+# ✅ Eventos WebSocket
+@socketio.on("unirse_sala")
+def manejar_unirse_sala(data):
+    nombre = data["nombre"]
+    sala = data["sala"]
 
-    if sala not in salas or nombre in salas[sala]:
-        return jsonify({"error": "Sala no encontrada o nombre en uso"}), 400
+    if sala not in salas:
+        socketio.emit("error", {"mensaje": "❌ Sala no encontrada"}, room=request.sid)
+        return
 
+    if nombre in salas[sala]:
+        socketio.emit("error", {"mensaje": "❌ Nombre ya en uso"}, room=request.sid)
+        return
+
+    join_room(sala)  # Unir a sala WebSocket
     salas[sala].append(nombre)
-    socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala})
-    return jsonify({"mensaje": f"{nombre} se unió a la sala {sala}", "jugadores": salas[sala]}), 200
+    print(f"🟢 {nombre} se unió a {sala}")
 
-# ✅ WebSocket para mensajes en el chat
+    # Notificar a todos en la sala
+    socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala}, room=sala)
+
 @socketio.on("mensaje")
 def manejar_mensaje(datos):
     print(f"💬 Mensaje recibido: {datos}")
-    socketio.emit("mensaje", datos)
+    sala = datos["sala"]
+    socketio.emit("mensaje", datos, room=sala)
 
-# ✅ Evento para iniciar la partida
 @socketio.on("iniciar_partida")
 def iniciar_partida(data):
     sala = data["sala"]
     if sala not in salas or len(salas[sala]) < 2:
-        socketio.emit("error", {"mensaje": "No hay suficientes jugadores"})
+        socketio.emit("error", {"mensaje": "❌ No hay suficientes jugadores para iniciar"}, room=sala)
         return
-    socketio.emit("inicio_partida", {"sala": sala})
 
-# ✅ Iniciar el servidor
+    print(f"🚀 Partida iniciada en sala {sala}")
+    socketio.emit("inicio_partida", {"sala": sala}, room=sala)
+
+# ✅ Inicializar base de datos y correr app
 if __name__ == "__main__":
     with app.app_context():
-        db.create_all()  # Crear la base de datos si no existe
+        db.create_all()
     print("🚀 Ejecutando Flask en el puerto 5000...")
     socketio.run(app, host="0.0.0.0", port=5000)
- 
