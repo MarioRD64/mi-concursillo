@@ -5,25 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Concursillo</title>
-    <link rel="stylesheet" href="static/style.css"> <!-- Estilos CSS -->
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script> <!-- Añadir Socket.IO -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> <!-- Corregido -->
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script> <!-- Socket.IO -->
 </head>
 <body>
     <h1>🎉 ¡Bienvenido a Mi Concursillo! 🎉</h1>
 
-    <!-- Registro del jugador -->
-    <div id="registro">
-        <input type="text" id="nombreJugador" placeholder="Escribe tu nombre">
-        <button onclick="registrarJugador()">Unirme</button>
-    </div>
-
     <!-- Registro con Google -->
-    <div id="registroGoogle" style="display:none;">
-        <a href="{{ url_for('google.login') }}" class="btn btn-google">Iniciar sesión con Google</a>
+    <div id="registroGoogle">
+        <a href="{{ url_for('google.login') }}" class="btn-google">Iniciar sesión con Google</a>
     </div>
 
     <!-- Botón para registrarse con correo y contraseña -->
-    <div>
+    <div id="botonRegistroEmail">
         <button onclick="mostrarRegistroEmail()">Registrarse con correo</button>
     </div>
 
@@ -37,32 +31,37 @@
         </form>
     </div>
 
-    <!-- Unirse a una sala -->
-    <div id="unirseSala" style="display:none;">
+    <!-- Registro del nombre de jugador (oculto hasta login) -->
+    <div id="registroNombre" style="display:none;">
+        <input type="text" id="nombreJugador" placeholder="Escribe tu nombre">
+        <button onclick="registrarJugador()">Continuar</button>
+    </div>
+
+    <!-- Unirse o crear sala (oculto hasta registrar nombre) -->
+    <div id="gestionSala" style="display:none;">
         <input type="text" id="nombreSala" placeholder="Código de sala">
         <button onclick="unirseSala()">Unirme a sala</button>
         <button onclick="crearSala()">Crear sala</button>
     </div>
 
-    <!-- Parte de la sala de espera -->
+    <!-- Sala de espera -->
     <div id="salaEspera" style="display:none;">
         <h3>Esperando jugadores...</h3>
         <div id="jugadoresSala"></div>
         <button id="iniciarJuego" onclick="iniciarJuego()" style="display:none;">Iniciar juego</button>
     </div>
 
-    <!-- Parte de las preguntas -->
+    <!-- Preguntas del juego -->
     <div id="pregunta-container" style="display:none;">
         <h2 id="textoPregunta"></h2>
         <div id="opciones"></div>
         <p id="mensaje"></p>
     </div>
 
-    <!-- Script JS -->
-    <script src="static/script.js"></script>
+    <!-- Script principal -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 
     <style>
-        /* Estilo para el botón de Google */
         .btn-google {
             display: inline-block;
             background-color: #4285F4;
@@ -73,11 +72,8 @@
             font-size: 16px;
         }
 
-        .btn-google:hover {
-            background-color: #357ae8;
-        }
+        .btn-google:hover { background-color: #357ae8; }
 
-        /* Estilos para el formulario de correo y contraseña */
         #formRegistro input {
             display: block;
             margin: 10px 0;
@@ -95,16 +91,49 @@
             width: 100%;
         }
 
-        #formRegistro button:hover {
-            background-color: #45a049;
-        }
+        #formRegistro button:hover { background-color: #45a049; }
     </style>
 
     <script>
-        // Función para mostrar el formulario de registro con correo
+        // Mostrar formulario de email
         function mostrarRegistroEmail() {
-            document.getElementById('registroGoogle').style.display = 'none';  // Ocultar Google
-            document.getElementById('registroEmail').style.display = 'block';  // Mostrar formulario de correo
+            document.getElementById('registroGoogle').style.display = 'none';
+            document.getElementById('botonRegistroEmail').style.display = 'none';
+            document.getElementById('registroEmail').style.display = 'block';
+        }
+
+        // Llamar esta función al completar login (ej: respuesta desde backend)
+        function loginCompleto() {
+            document.getElementById('registroGoogle').style.display = 'none';
+            document.getElementById('botonRegistroEmail').style.display = 'none';
+            document.getElementById('registroEmail').style.display = 'none';
+            document.getElementById('registroNombre').style.display = 'block';
+        }
+
+        // Después de poner nombre
+        function registrarJugador() {
+            const nombre = document.getElementById('nombreJugador').value;
+            if (nombre.trim() !== "") {
+                document.getElementById('registroNombre').style.display = 'none';
+                document.getElementById('gestionSala').style.display = 'block';
+            } else {
+                alert('Por favor escribe tu nombre.');
+            }
+        }
+
+        // Cuando el jugador se una a la sala
+        function mostrarSalaEspera(esHost) {
+            document.getElementById('gestionSala').style.display = 'none';
+            document.getElementById('salaEspera').style.display = 'block';
+            if (esHost) {
+                document.getElementById('iniciarJuego').style.display = 'block';
+            }
+        }
+
+        // Mostrar preguntas cuando empiece el juego
+        function mostrarPreguntas() {
+            document.getElementById('salaEspera').style.display = 'none';
+            document.getElementById('pregunta-container').style.display = 'block';
         }
     </script>
 </body>
