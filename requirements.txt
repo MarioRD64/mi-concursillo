@@ -7,4 +7,4 @@ gevent-websocket
 flask-sqlalchemy
 flask-dance
 flask-login
-
+Flask-Mail
