@@ -3,8 +3,60 @@ const socket = io("http://127.0.0.1:5000");
 let nombreJugador = '';
 let codigoSala = '';
 
-// Función para registrar un jugador
+// **Función para registrar un jugador**
 function registrarJugador() {
+    let email = document.getElementById("emailJugador").value.trim();
+    let password = document.getElementById("passwordJugador").value.trim();
+
+    if (!email || !password) {
+        alert("❌ Ingresa correo y contraseña válidos.");
+        return;
+    }
+
+    fetch("/registro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert("✅ Registro exitoso. Revisa tu correo para confirmar antes de jugar.");
+            // Se oculta el formulario de registro y se muestra el de unirse a sala
+            document.getElementById("registro").style.display = "none";
+            document.getElementById("unirseSala").style.display = "block";
+        }
+    })
+    .catch(err => console.error("❌ Error:", err));
+}
+
+// **Función para iniciar sesión**
+function iniciarSesion() {
+    let email = document.getElementById("emailJugador").value.trim();
+    let password = document.getElementById("passwordJugador").value.trim();
+
+    fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert("✅ Sesión iniciada. Ya puedes crear o unirte a una sala.");
+            document.getElementById("registro").style.display = "none";
+            document.getElementById("unirseSala").style.display = "block";
+        }
+    })
+    .catch(err => console.error("❌ Error:", err));
+}
+
+// **Función para registrar el nombre del jugador**
+function registrarNombreJugador() {
     nombreJugador = document.getElementById("nombreJugador").value.trim();
 
     if (!nombreJugador) {
@@ -12,12 +64,12 @@ function registrarJugador() {
         return;
     }
 
-    // Aquí puedes poner lógica extra si quieres registrar jugadores en backend, pero para ahora directo seguimos:
+    // Se oculta el registro y se muestra la opción de unirse a sala
     document.getElementById("registro").style.display = "none";
     document.getElementById("unirseSala").style.display = "block";
 }
 
-// ✅ Función para crear una sala
+// **Función para crear una sala**
 function crearSala() {
     fetch("/crear_sala", {
         method: "POST",
@@ -33,14 +85,14 @@ function crearSala() {
             mostrarCodigoSala(codigoSala);
             mostrarSalaEspera(data.jugadores);
 
-            // 🟢 Unirse como HOST a la sala WebSocket
+            // Unirse como HOST a la sala WebSocket
             socket.emit("unirse_sala", { nombre: nombreJugador, sala: codigoSala });
         }
     })
     .catch(error => console.error("❌ Error al crear la sala:", error));
 }
 
-// ✅ Función para unirse a una sala
+// **Función para unirse a una sala**
 function unirseSala() {
     const sala = document.getElementById("nombreSala").value.trim();
 
@@ -49,28 +101,28 @@ function unirseSala() {
         return;
     }
 
-    // Solo unimos vía socket (no fetch)
+    // Unirse vía socket
     codigoSala = sala;
     socket.emit("unirse_sala", { nombre: nombreJugador, sala: codigoSala });
 
-    // Mostrar sala de espera (jugadores llegarán por socket)
+    // Mostrar sala de espera
     document.getElementById("unirseSala").style.display = "none";
     document.getElementById("salaEspera").style.display = "block";
 }
 
-// ✅ Mostrar código de sala en la UI
+// **Mostrar código de sala en la UI**
 function mostrarCodigoSala(codigo) {
     let codigoElemento = document.createElement("p");
     codigoElemento.innerHTML = `Código de sala: <strong>${codigo}</strong>`;
     document.getElementById("salaEspera").prepend(codigoElemento);
 }
 
-// ✅ Mostrar la sala de espera
+// **Mostrar la sala de espera**
 function mostrarSalaEspera(jugadores) {
     actualizarJugadoresSala(jugadores);
 }
 
-// ✅ Actualizar la lista de jugadores en la sala
+// **Actualizar la lista de jugadores en la sala**
 function actualizarJugadoresSala(jugadores) {
     let listaJugadores = document.getElementById("jugadoresSala");
     listaJugadores.innerHTML = '';
@@ -81,7 +133,7 @@ function actualizarJugadoresSala(jugadores) {
         listaJugadores.appendChild(jugadorDiv);
     });
 
-    // Mostrar botón de iniciar solo al host (primero en la lista)
+    // Mostrar botón de iniciar solo al host (primer jugador en la lista)
     if (jugadores[0] === nombreJugador) {
         document.getElementById("iniciarJuego").style.display = "block";
     } else {
@@ -89,20 +141,18 @@ function actualizarJugadoresSala(jugadores) {
     }
 }
 
-// ✅ Función para iniciar el juego (solo host)
+// **Función para iniciar el juego (solo host)**
 function iniciarJuego() {
     socket.emit("iniciar_partida", { sala: codigoSala });
 }
 
-// ✅ Escuchar WebSockets
+// **Escuchar WebSockets**
 
-// Cuando un nuevo jugador se une
 socket.on("jugador_unido", (data) => {
     console.log("👥 Jugadores actualizados:", data.jugadores);
     actualizarJugadoresSala(data.jugadores);
 });
 
-// Cuando la partida inicia
 socket.on("inicio_partida", () => {
     console.log("🚀 Partida iniciada!");
     document.getElementById("salaEspera").style.display = "none";
@@ -110,7 +160,7 @@ socket.on("inicio_partida", () => {
     cargarPregunta();
 });
 
-// ✅ Cargar y mostrar preguntas
+// **Cargar y mostrar preguntas**
 function cargarPregunta() {
     fetch("/preguntas")
         .then(response => response.json())
@@ -120,7 +170,7 @@ function cargarPregunta() {
         });
 }
 
-// ✅ Mostrar la pregunta y opciones
+// **Mostrar la pregunta y opciones**
 function mostrarPregunta(pregunta) {
     document.getElementById("textoPregunta").innerText = pregunta.pregunta;
 
@@ -136,7 +186,7 @@ function mostrarPregunta(pregunta) {
     });
 }
 
-// ✅ Verificar respuesta
+// **Verificar respuesta**
 function verificarRespuesta(boton, seleccion, correcta) {
     let mensaje = document.getElementById("mensaje");
 
@@ -151,4 +201,3 @@ function verificarRespuesta(boton, seleccion, correcta) {
     // Deshabilitar todas las opciones
     document.querySelectorAll(".boton-opcion").forEach(b => b.disabled = true);
 }
-

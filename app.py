@@ -1,42 +1,50 @@
 import gevent.monkey
 import os
 import json
-import time
-import threading
 import random
 import string
-from flask import Flask, jsonify, request, send_from_directory, redirect, url_for, session
+from flask import Flask, jsonify, request, send_from_directory, redirect, url_for
 from flask_socketio import SocketIO, join_room
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_dance.contrib.google import make_google_blueprint, google
 
-# 🟢 Parcheamos gevent
+# Parcheamos gevent
 gevent.monkey.patch_all()
-
-print("✅ Flask está iniciando...")
 
 # Inicialización
 app = Flask(__name__)
 app.secret_key = "super_secreta"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///usuarios.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 587
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = "mario2011rd@gmail.com"  # Cambiar
+app.config["MAIL_PASSWORD"] = "jlnt iadv avgl hdzw"        # Cambiar
+app.config["MAIL_DEFAULT_SENDER"] = "mario2011rd@gmail.com"  # Cambiar
 
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 login_manager = LoginManager(app)
-login_manager.login_view = "login"
+mail = Mail(app)
 
 # Google OAuth
 google_bp = make_google_blueprint(client_id="TU_CLIENT_ID", client_secret="TU_CLIENT_SECRET", redirect_to="google_login_callback")
 app.register_blueprint(google_bp, url_prefix="/login")
+
+# Serializador para tokens
+serializer = URLSafeTimedSerializer(app.secret_key)
 
 # Modelo Usuario
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
+    confirmado = db.Column(db.Boolean, default=False)
     google_id = db.Column(db.String(150), unique=True, nullable=True)
 
     def set_password(self, password):
@@ -45,23 +53,31 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-# Preguntas
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Cargar preguntas
 def cargar_preguntas():
     try:
         with open("preguntas.json", "r", encoding="utf-8") as file:
             return json.load(file)
     except FileNotFoundError:
-        print("⚠️ Error: No se encontró el archivo preguntas.json")
+        print("⚠️ Archivo preguntas.json no encontrado")
         return []
 
 preguntas = cargar_preguntas()
 salas = {}
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+# Enviar correo de confirmación
+def enviar_confirmacion(email):
+    token = serializer.dumps(email, salt='email-confirm')
+    link = url_for('confirmar_email', token=token, _external=True)
+    msg = Message("Confirma tu correo", recipients=[email])
+    msg.body = f"Por favor confirma tu correo haciendo clic en este enlace: {link}"
+    mail.send(msg)
 
-# Rutas web
+# Rutas
 @app.route('/')
 def home():
     return send_from_directory("static", "index.html")
@@ -80,7 +96,22 @@ def registro():
     db.session.add(nuevo_usuario)
     db.session.commit()
 
-    return jsonify({"mensaje": "✅ Registro exitoso"}), 201
+    enviar_confirmacion(email)
+
+    return jsonify({"mensaje": "✅ Registro exitoso. Revisa tu correo para confirmar."}), 201
+
+@app.route("/confirmar/<token>")
+def confirmar_email(token):
+    try:
+        email = serializer.loads(token, salt='email-confirm', max_age=3600)
+    except:
+        return jsonify({"error": "❌ Enlace inválido o expirado."}), 400
+
+    usuario = User.query.filter_by(email=email).first_or_404()
+    usuario.confirmado = True
+    db.session.commit()
+
+    return jsonify({"mensaje": "✅ Correo confirmado, ya puedes iniciar sesión."})
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -90,9 +121,11 @@ def login():
 
     usuario = User.query.filter_by(email=email).first()
     if usuario and usuario.check_password(password):
+        if not usuario.confirmado:
+            return jsonify({"error": "❌ Debes confirmar tu correo antes de jugar."}), 403
         login_user(usuario)
         return jsonify({"mensaje": "✅ Inicio de sesión exitoso"}), 200
-    return jsonify({"error": "Credenciales incorrectas"}), 401
+    return jsonify({"error": "❌ Credenciales incorrectas"}), 401
 
 @app.route("/login/google")
 def google_login():
@@ -103,7 +136,7 @@ def google_login():
 
     usuario = User.query.filter_by(email=user_info["email"]).first()
     if not usuario:
-        usuario = User(email=user_info["email"], google_id=user_info["id"])
+        usuario = User(email=user_info["email"], google_id=user_info["id"], confirmado=True)
         db.session.add(usuario)
         db.session.commit()
 
@@ -121,12 +154,13 @@ def logout():
 def perfil():
     return jsonify({"usuario": current_user.email})
 
-@app.route("/preguntas", methods=["GET"])
+@app.route("/preguntas")
 def obtener_preguntas():
     return jsonify(preguntas)
 
-# ✅ Crear sala (HTTP)
+# Crear sala
 @app.route("/crear_sala", methods=["POST"])
+@login_required
 def crear_sala():
     datos = request.json
     nombre = datos.get("nombre")
@@ -144,7 +178,7 @@ def crear_sala():
         "jugadores": salas[codigo_sala]
     }), 200
 
-# ✅ Eventos WebSocket
+# WebSocket
 @socketio.on("unirse_sala")
 def manejar_unirse_sala(data):
     nombre = data["nombre"]
@@ -158,16 +192,12 @@ def manejar_unirse_sala(data):
         socketio.emit("error", {"mensaje": "❌ Nombre ya en uso"}, room=request.sid)
         return
 
-    join_room(sala)  # Unir a sala WebSocket
+    join_room(sala)
     salas[sala].append(nombre)
-    print(f"🟢 {nombre} se unió a {sala}")
-
-    # Notificar a todos en la sala
     socketio.emit("jugador_unido", {"jugadores": salas[sala], "sala": sala}, room=sala)
 
 @socketio.on("mensaje")
 def manejar_mensaje(datos):
-    print(f"💬 Mensaje recibido: {datos}")
     sala = datos["sala"]
     socketio.emit("mensaje", datos, room=sala)
 
@@ -178,12 +208,11 @@ def iniciar_partida(data):
         socketio.emit("error", {"mensaje": "❌ No hay suficientes jugadores para iniciar"}, room=sala)
         return
 
-    print(f"🚀 Partida iniciada en sala {sala}")
     socketio.emit("inicio_partida", {"sala": sala}, room=sala)
 
-# ✅ Inicializar base de datos y correr app
+# Iniciar base de datos
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    print("🚀 Ejecutando Flask en el puerto 5000...")
+    print("🚀 Servidor corriendo en puerto 5000...")
     socketio.run(app, host="0.0.0.0", port=5000)
