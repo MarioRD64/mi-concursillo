@@ -88,14 +88,17 @@ def registro():
     email = datos.get("email")
     password = datos.get("password")
 
+    # Verificar si el email ya está registrado
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "El email ya está registrado"}), 400
 
+    # Crear nuevo usuario
     nuevo_usuario = User(email=email)
     nuevo_usuario.set_password(password)
     db.session.add(nuevo_usuario)
     db.session.commit()
 
+    # Enviar correo de confirmación
     enviar_confirmacion(email)
 
     return jsonify({"mensaje": "✅ Registro exitoso. Revisa tu correo para confirmar."}), 201
@@ -119,6 +122,7 @@ def login():
     email = datos.get("email")
     password = datos.get("password")
 
+    # Verificar si el usuario existe y las credenciales son correctas
     usuario = User.query.filter_by(email=email).first()
     if usuario and usuario.check_password(password):
         if not usuario.confirmado:
