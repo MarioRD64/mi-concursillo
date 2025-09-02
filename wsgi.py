@@ -1,8 +1,12 @@
 import sys
 import logging
+import os
 logging.basicConfig(stream=sys.stderr)
-# sys.path.insert(0,"/root/customer-account-automation/")
 
-from app import app as application
+from app import create_app, socketio
+
+app = create_app(os.getenv('FLASK_CONFIG') or 'production')
+application = app
+
 if __name__ == "__main__":
-    application.run()
+    socketio.run(app)

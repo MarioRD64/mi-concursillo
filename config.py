@@ -6,6 +6,13 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///concursillo.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    @staticmethod
+    def init_app(app):
+        # Handle Render PostgreSQL URL format
+        uri = app.config['SQLALCHEMY_DATABASE_URI']
+        if uri and uri.startswith('postgres://'):
+            app.config['SQLALCHEMY_DATABASE_URI'] = uri.replace('postgres://', 'postgresql://', 1)
+    
     # Mail configuration
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 587
@@ -45,7 +52,6 @@ class ProductionConfig(Config):
         
         # Log to stderr in production
         import logging
-        import os
         from logging import StreamHandler
         file_handler = StreamHandler()
         file_handler.setLevel(logging.INFO)
