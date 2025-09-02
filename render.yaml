@@ -3,14 +3,12 @@ services:
     name: el-concursillo
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python app_new.py"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT wsgi:application"
     envVars:
       - key: FLASK_ENV
         value: production
       - key: FLASK_CONFIG
         value: production
-      - key: PORT
-        value: "10000"
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
