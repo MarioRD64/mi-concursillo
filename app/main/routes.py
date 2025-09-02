@@ -20,7 +20,14 @@ def robots():
 # Serve static files explicitly
 @bp.route('/static/<path:path>')
 def serve_static(path):
-    return send_from_directory(app.static_folder, path)
+    return send_from_directory(os.path.join(app.root_path, '..', 'static'), path)
+
+# Serve root static files
+@bp.route('/<path:filename>')
+def serve_root_static(filename):
+    if filename in ['favicon.ico', 'robots.txt', 'script.js', 'style.css']:
+        return send_from_directory(os.path.join(app.root_path, '..', 'static'), filename)
+    return send_from_directory(os.path.join(app.root_path, '..', 'static'), filename, as_attachment=False)
 
 @bp.route('/set_language/<language>')
 def set_language(language):
