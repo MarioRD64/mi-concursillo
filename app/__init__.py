@@ -1,9 +1,11 @@
-from flask import Flask
+from flask import Flask, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
 from flask_socketio import SocketIO
 from flask_babel import Babel
+from flask_cors import CORS
+from datetime import timedelta
 from config import config
 
 # Initialize extensions
@@ -20,11 +22,27 @@ def create_app(config_name='default'):
     # Initialize app configuration
     config[config_name].init_app(app)
     
+    # Configure session
+    app.config.update(
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+        PERMANENT_SESSION_LIFETIME=timedelta(days=7)
+    )
+    
+    # Initialize CORS
+    CORS(app, 
+         resources={"*": {"origins": ["https://mi-concursillo.onrender.com", "http://localhost:5000"]}},
+         supports_credentials=True)
+    
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
     mail.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, 
+                     cors_allowed_origins=["https://mi-concursillo.onrender.com", "http://localhost:5000"],
+                     manage_session=False,
+                     cors_credentials=True)
     
     # Configure login manager
     login_manager.login_view = 'auth.login'
