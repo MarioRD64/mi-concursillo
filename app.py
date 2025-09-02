@@ -222,6 +222,9 @@ def iniciar_partida(data):
 with app.app_context():
     db.create_all()
 
+# Expose the SocketIO app for Gunicorn
+application = socketio
+
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 Servidor corriendo en puerto {port}...")
