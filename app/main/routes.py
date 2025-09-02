@@ -6,6 +6,16 @@ from app.main import bp
 def index():
     return render_template('index.html')
 
+@bp.route('/favicon.ico')
+def favicon():
+    from flask import send_from_directory
+    return send_from_directory('../static', 'favicon.ico')
+
+@bp.route('/robots.txt')
+def robots():
+    from flask import send_from_directory
+    return send_from_directory('../static', 'robots.txt')
+
 @bp.route('/set_language/<language>')
 def set_language(language):
     session['language'] = language
