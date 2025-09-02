@@ -36,8 +36,16 @@ def create_app(config_name='default'):
         SESSION_COOKIE_SAMESITE='Lax',
         PERMANENT_SESSION_LIFETIME=timedelta(days=7),
         SEND_FILE_MAX_AGE_DEFAULT=0,  # Disable caching for development
-        PREFERRED_URL_SCHEME='https'  # Force HTTPS for URL generation
+        PREFERRED_URL_SCHEME='https',  # Force HTTPS for URL generation
+        # Ensure static files are served with the correct MIME type
+        SEND_FILE_MAX_AGE_DEFAULT=0,  # Disable caching for development
+        MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload size
+        STATIC_FOLDER=os.path.join(root_path, 'static')
     )
+    
+    # Explicitly set static folder
+    app.static_folder = os.path.join(root_path, 'static')
+    app.static_url_path = '/static'
     
     # Initialize CORS
     CORS(app, 
