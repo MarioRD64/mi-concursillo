@@ -10,7 +10,7 @@ import os
 
 serializer = URLSafeTimedSerializer(os.environ.get('SECRET_KEY', 'dev_key'))
 
-@bp.route('/register', methods=['POST', 'OPTIONS'])
+@bp.route('/auth/register', methods=['POST', 'OPTIONS'])
 def register():
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -56,7 +56,7 @@ def register():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/login', methods=['POST', 'OPTIONS'])
+@bp.route('/auth/login', methods=['POST', 'OPTIONS'])
 def login():
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -97,13 +97,13 @@ def login():
     
     return jsonify({'error': _('Credenciales incorrectas')}), 401
 
-@bp.route('/logout')
+@bp.route('/auth/logout')
 @login_required
 def logout():
     logout_user()
     return jsonify({'message': _('Has cerrado sesión')}), 200
 
-@bp.route('/confirm/<token>')
+@bp.route('/auth/confirm/<token>')
 def confirm_email(token):
     try:
         email = serializer.loads(token, salt='email-confirm', max_age=3600)
