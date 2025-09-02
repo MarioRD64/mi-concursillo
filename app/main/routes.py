@@ -1,8 +1,26 @@
 import os
-from flask import render_template, request, jsonify, session, send_from_directory
+from flask import render_template, request, jsonify, session, send_from_directory, current_app
 from flask_babel import _, get_locale
 from app.main import bp
 from app import app
+
+# Create a route to serve static files directly
+@bp.route('/<path:path>')
+def static_proxy(path):
+    # First try to serve static files
+    try:
+        return current_app.send_static_file(path)
+    except:
+        pass
+    
+    # Then try to serve from static folder
+    try:
+        return send_from_directory(os.path.join(current_app.root_path, '..', 'static'), path)
+    except:
+        pass
+        
+    # If file not found, return 404
+    return "File not found", 404
 
 @bp.route('/')
 def index():

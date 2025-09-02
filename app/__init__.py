@@ -16,9 +16,14 @@ socketio = SocketIO()
 babel = Babel()
 
 def create_app(config_name='default'):
+    # Get the root path of the project
+    root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    
     app = Flask(__name__, 
-               static_folder='../../static',
-               static_url_path='/static')
+               static_folder=os.path.join(root_path, 'static'),
+               static_url_path='')
+    
+    # Load configuration
     app.config.from_object(config[config_name])
     
     # Initialize app configuration
