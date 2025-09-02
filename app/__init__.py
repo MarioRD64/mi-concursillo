@@ -25,7 +25,6 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     mail.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
-    babel.init_app(app)
     
     # Configure login manager
     login_manager.login_view = 'auth.login'
@@ -41,12 +40,13 @@ def create_app(config_name='default'):
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
     
-    # Language selector
-    @babel.localeselector
+    # Language selector - move after babel.init_app
     def get_locale():
         from flask import request, session
         if 'language' in session:
             return session['language']
         return request.accept_languages.best_match(app.config['LANGUAGES'].keys()) or 'es'
+    
+    babel.init_app(app, locale_selector=get_locale)
     
     return app
