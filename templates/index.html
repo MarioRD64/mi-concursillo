@@ -338,12 +338,16 @@
 
 {% block scripts %}
 <script>
-let authMode = 'login';
-let targetRole = '';
+// Global variables
+let authMode = 'login'; // Default to login mode
+let targetRole = null; // Will be set when clicking host/player buttons
 
 function showAuth(role) {
     targetRole = role;
     document.getElementById('authSection').style.display = 'block';
+    // Reset form and set to login by default
+    document.getElementById('authForm').reset();
+    switchAuthTab('login');
 }
 
 function hideAuth() {
@@ -443,13 +447,9 @@ document.getElementById('authForm').addEventListener('submit', async function(e)
         }
         
         // Show success message
-        showNotification(
-            authMode === 'login' ? 'Login successful! Redirecting...' : 'Registration successful! Please check your email to confirm your account.',
-            'success'
-        );
-        
-        // Redirect if login successful
         if (authMode === 'login') {
+            showNotification('Login successful! Redirecting...', 'success');
+            // Redirect based on role
             if (targetRole === 'host') {
                 window.location.href = '/game/host';
             } else {
@@ -457,7 +457,10 @@ document.getElementById('authForm').addEventListener('submit', async function(e)
                 setTimeout(hideAuth, 1500);
             }
         } else {
-            // For registration, switch to login tab after a delay
+            // For registration
+            showNotification('Registration successful! Please check your email to confirm your account.', 'success');
+            // Clear form and switch to login tab
+            document.getElementById('authForm').reset();
             setTimeout(() => switchAuthTab('login'), 1500);
         }
     } catch (error) {
