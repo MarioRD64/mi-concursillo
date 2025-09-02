@@ -10,12 +10,26 @@ import os
 
 serializer = URLSafeTimedSerializer(os.environ.get('SECRET_KEY', 'dev_key'))
 
-@bp.route('/register', methods=['POST'])
+@bp.route('/register', methods=['POST', 'OPTIONS'])
 def register():
-    data = request.json
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mi-concursillo.onrender.com')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+        
     email = data.get('email')
     username = data.get('username')
     password = data.get('password')
+    
+    if not all([email, username, password]):
+        return jsonify({'error': _('Todos los campos son obligatorios')}), 400
     
     if User.query.filter_by(email=email).first():
         return jsonify({'error': _('El email ya está registrado')}), 400
@@ -23,21 +37,44 @@ def register():
     if User.query.filter_by(username=username).first():
         return jsonify({'error': _('El nombre de usuario ya está en uso')}), 400
     
-    user = User(email=email, username=username)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-    
-    # Send confirmation email
-    send_confirmation_email(email)
-    
-    return jsonify({'message': _('Registro exitoso. Revisa tu correo para confirmar.')}), 201
+    try:
+        user = User(email=email, username=username)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        
+        # Send confirmation email
+        send_confirmation_email(email)
+        
+        response = jsonify({
+            'message': _('Registro exitoso. Revisa tu correo para confirmar.'),
+            'status': 'success'
+        })
+        response.status_code = 201
+        return response
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-@bp.route('/login', methods=['POST'])
+@bp.route('/login', methods=['POST', 'OPTIONS'])
 def login():
-    data = request.json
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'https://mi-concursillo.onrender.com')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+        
     email = data.get('email')
     password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({'error': _('Email y contraseña son obligatorios')}), 400
     
     user = User.query.filter_by(email=email).first()
     
@@ -46,14 +83,17 @@ def login():
             return jsonify({'error': _('Debes confirmar tu correo antes de jugar.')}), 403
         
         login_user(user)
-        return jsonify({
+        response = jsonify({
             'message': _('Inicio de sesión exitoso'),
             'user': {
                 'id': user.id,
                 'username': user.username,
                 'email': user.email
-            }
-        }), 200
+            },
+            'status': 'success'
+        })
+        response.status_code = 200
+        return response
     
     return jsonify({'error': _('Credenciales incorrectas')}), 401
 

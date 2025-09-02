@@ -405,19 +405,19 @@ document.getElementById('authForm').addEventListener('submit', async function(e)
     
     // Basic validation
     if (!email || !password || (authMode === 'register' && !username)) {
-        showNotification('Please fill in all fields', 'error');
+        showNotification('Por favor, completa todos los campos', 'error');
         return;
     }
     
     // Email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showNotification('Please enter a valid email address', 'error');
+        showNotification('Por favor, introduce un email válido', 'error');
         return;
     }
     
     // Password validation (at least 6 characters)
     if (password.length < 6) {
-        showNotification('Password must be at least 6 characters', 'error');
+        showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
         return;
     }
     
@@ -434,7 +434,7 @@ document.getElementById('authForm').addEventListener('submit', async function(e)
         const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
         const data = authMode === 'login' ? {email, password} : {email, username, password};
         
-        console.log('Sending request to:', endpoint, 'with data:', data);
+        console.log('Enviando solicitud a:', endpoint, 'con datos:', data);
         
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -442,37 +442,37 @@ document.getElementById('authForm').addEventListener('submit', async function(e)
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            credentials: 'include',  // Important for session cookies
+            credentials: 'include',  // Importante para las cookies de sesión
             body: JSON.stringify(data)
         });
         
         let responseData;
         try {
             responseData = await response.json();
-            console.log('Response status:', response.status, 'Data:', responseData);
+            console.log('Estado de la respuesta:', response.status, 'Datos:', responseData);
         } catch (e) {
-            console.error('Failed to parse JSON response:', e);
-            throw new Error('Invalid server response');
+            console.error('Error al analizar la respuesta JSON:', e);
+            throw new Error('Respuesta del servidor no válida');
         }
         
         if (!response.ok) {
-            throw new Error(responseData.error || `Server error: ${response.status}`);
+            throw new Error(responseData.error || `Error del servidor: ${response.status}`);
         }
         
-        // Show success message
+        // Mostrar mensaje de éxito
         if (authMode === 'login') {
-            showNotification('Login successful! Redirecting...', 'success');
-            // Redirect based on role
+            showNotification('¡Inicio de sesión exitoso! Redirigiendo...', 'success');
+            // Redirigir según el rol
             if (targetRole === 'host') {
                 window.location.href = '/game/host';
             } else {
-                // For players, just close the auth modal
+                // Para jugadores, simplemente cerrar el modal de autenticación
                 setTimeout(hideAuth, 1500);
             }
         } else {
-            // For registration
-            showNotification('Registration successful! Please check your email to confirm your account.', 'success');
-            // Clear form and switch to login tab
+            // Para registro
+            showNotification('¡Registro exitoso! Por favor, revisa tu correo para confirmar tu cuenta.', 'success');
+            // Limpiar el formulario y cambiar a la pestaña de inicio de sesión
             document.getElementById('authForm').reset();
             setTimeout(() => switchAuthTab('login'), 1500);
         }
