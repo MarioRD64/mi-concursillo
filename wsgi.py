@@ -9,4 +9,5 @@ app = create_app(os.getenv('FLASK_CONFIG') or 'production')
 application = app
 
 if __name__ == "__main__":
-    socketio.run(app)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
