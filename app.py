@@ -222,8 +222,8 @@ def iniciar_partida(data):
 with app.app_context():
     db.create_all()
 
-# Expose the SocketIO app for Gunicorn
-application = socketio
+# Expose the Flask app for Gunicorn (SocketIO will wrap it automatically)
+application = app
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
