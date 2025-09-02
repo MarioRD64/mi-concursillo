@@ -110,39 +110,122 @@
     
     .auth-section {
         background: white;
-        padding: 30px;
+        padding: 40px;
         border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        margin: 20px 0;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        margin: 20px auto;
+        max-width: 400px;
         display: none;
     }
     
     .auth-form input {
         width: 100%;
-        padding: 12px;
-        margin: 8px 0;
-        border: 1px solid #ddd;
-        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 10px 0;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
         font-size: 1em;
+        transition: all 0.3s ease;
+    }
+    
+    .auth-form input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        outline: none;
     }
     
     .auth-tabs {
         display: flex;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 5px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
     }
     
     .auth-tab {
         flex: 1;
-        padding: 10px;
-        background: #f8f9fa;
+        padding: 12px 0;
+        background: transparent;
         border: none;
         cursor: pointer;
-        border-radius: 8px 8px 0 0;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
     }
     
     .auth-tab.active {
         background: #667eea;
         color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 20px 0;
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .divider::before {
+        margin-right: 10px;
+    }
+    
+    .divider::after {
+        margin-left: 10px;
+    }
+    
+    .google-btn {
+        width: 100%;
+        background: white;
+        color: #444;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 12px 0;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+    
+    .google-btn:hover {
+        background: #f5f5f5;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .google-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+    }
+    
+    .auth-footer {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 14px;
+        color: #666;
+    }
+    
+    .auth-footer a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .auth-footer a:hover {
+        text-decoration: underline;
     }
 </style>
 {% endblock %}
@@ -177,19 +260,44 @@
 
 <!-- Authentication Section -->
 <div class="auth-section" id="authSection">
+    <h2 style="text-align: center; margin-bottom: 25px; color: #333;">Welcome to El Concursillo</h2>
+    
+    <!-- Google Login Button -->
+    <button class="google-btn" id="googleLoginBtn" onclick="loginWithGoogle()">
+        <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 13.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V6.06H2.18C1.43 7.55 1 9.22 1 11s.43 3.45 1.18 4.94l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 6.94l3.66 2.84c.87-2.6 3.3-4.4 6.16-4.4z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+    </button>
+    
+    <div class="divider">or</div>
+    
     <div class="auth-tabs">
-        <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Login</button>
-        <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Register</button>
+        <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Create Account</button>
     </div>
     
-    <form class="auth-form" id="authForm">
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="text" id="username" placeholder="Username" required style="display:none;">
+    <form class="auth-form" id="authForm" style="margin-top: 20px;">
+        <input type="email" id="email" placeholder="Email address" required>
+        <input type="text" id="username" placeholder="Choose a username" required style="display:none;">
         <input type="password" id="password" placeholder="Password" required>
-        <button type="submit" class="btn-primary" id="authSubmitBtn">Login</button>
+        <button type="submit" class="btn-primary" id="authSubmitBtn" style="margin-top: 15px;">
+            <span id="submitBtnText">Sign In</span>
+            <span id="submitBtnSpinner" style="display:none;">
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="sr-only">Loading...</span>
+            </span>
+        </button>
     </form>
     
-    <button class="btn-primary" onclick="hideAuth()" style="background: #6c757d; margin-top: 10px;">Cancel</button>
+    <div class="auth-footer">
+        <span id="authFooterText">Don't have an account? </span>
+        <a href="#" onclick="switchAuthTab('register')" id="switchToRegister">Sign up</a>
+        <a href="#" onclick="switchAuthTab('login')" id="switchToLogin" style="display:none;">Sign in</a>
+    </div>
 </div>
 
 <!-- Join Game Section -->
@@ -252,43 +360,180 @@ function hideJoinForm() {
 
 function switchAuthTab(mode) {
     authMode = mode;
-    document.getElementById('loginTab').classList.toggle('active', mode === 'login');
-    document.getElementById('registerTab').classList.toggle('active', mode === 'register');
-    document.getElementById('username').style.display = mode === 'register' ? 'block' : 'none';
-    document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Login' : 'Register';
+    const isLogin = mode === 'login';
+    
+    // Update tabs
+    document.getElementById('loginTab').classList.toggle('active', isLogin);
+    document.getElementById('registerTab').classList.toggle('active', !isLogin);
+    
+    // Toggle username field
+    document.getElementById('username').style.display = isLogin ? 'none' : 'block';
+    
+    // Update button text
+    document.getElementById('submitBtnText').textContent = isLogin ? 'Sign In' : 'Create Account';
+    
+    // Update footer text and toggle links
+    const switchToRegister = document.getElementById('switchToRegister');
+    const switchToLogin = document.getElementById('switchToLogin');
+    const authFooterText = document.getElementById('authFooterText');
+    
+    if (isLogin) {
+        authFooterText.textContent = "Don't have an account? ";
+        switchToRegister.style.display = 'inline';
+        switchToLogin.style.display = 'none';
+    } else {
+        authFooterText.textContent = 'Already have an account? ';
+        switchToRegister.style.display = 'none';
+        switchToLogin.style.display = 'inline';
+    }
+    
+    // Reset form
+    document.getElementById('authForm').reset();
 }
 
-document.getElementById('authForm').addEventListener('submit', function(e) {
+// Handle form submission
+document.getElementById('authForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    const username = document.getElementById('username').value;
+    const username = document.getElementById('username').value.trim();
     
-    const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
-    const data = authMode === 'login' ? {email, password} : {email, username, password};
+    // Basic validation
+    if (!email || !password || (authMode === 'register' && !username)) {
+        showNotification('Please fill in all fields', 'error');
+        return;
+    }
     
-    fetch(endpoint, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            alert(data.message);
-            if (authMode === 'login' && targetRole === 'host') {
-                window.location.href = '/game/host';
-            } else if (authMode === 'register') {
-                alert('Please check your email to confirm your account before hosting.');
-            }
-            hideAuth();
+    // Email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showNotification('Please enter a valid email address', 'error');
+        return;
+    }
+    
+    // Password validation (at least 6 characters)
+    if (password.length < 6) {
+        showNotification('Password must be at least 6 characters', 'error');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('authSubmitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const submitBtnSpinner = document.getElementById('submitBtnSpinner');
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtnText.style.display = 'none';
+    submitBtnSpinner.style.display = 'inline-block';
+    
+    try {
+        const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
+        const data = authMode === 'login' ? {email, password} : {email, username, password};
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const responseData = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(responseData.error || 'An error occurred');
         }
-    })
-    .catch(err => console.error('Auth error:', err));
+        
+        // Show success message
+        showNotification(
+            authMode === 'login' ? 'Login successful! Redirecting...' : 'Registration successful! Please check your email to confirm your account.',
+            'success'
+        );
+        
+        // Redirect if login successful
+        if (authMode === 'login') {
+            if (targetRole === 'host') {
+                window.location.href = '/game/host';
+            } else {
+                // For players, just close the auth modal
+                setTimeout(hideAuth, 1500);
+            }
+        } else {
+            // For registration, switch to login tab after a delay
+            setTimeout(() => switchAuthTab('login'), 1500);
+        }
+    } catch (error) {
+        console.error('Auth error:', error);
+        showNotification(error.message || 'An error occurred. Please try again.', 'error');
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtnText.style.display = 'inline-block';
+        submitBtnSpinner.style.display = 'none';
+    }
 });
+
+// Show notification function
+function showNotification(message, type = 'info') {
+    // Remove any existing notifications
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Add styles
+    notification.style.position = 'fixed';
+    notification.style.top = '20px';
+    notification.style.right = '20px';
+    notification.style.padding = '12px 20px';
+    notification.style.borderRadius = '8px';
+    notification.style.color = 'white';
+    notification.style.fontWeight = '500';
+    notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    notification.style.zIndex = '1000';
+    notification.style.animation = 'slideIn 0.3s ease-out';
+    notification.style.transform = 'translateX(0)';
+    
+    // Set background color based on type
+    if (type === 'error') {
+        notification.style.backgroundColor = '#ff4444';
+    } else if (type === 'success') {
+        notification.style.backgroundColor = '#00C851';
+    } else {
+        notification.style.backgroundColor = '#33b5e5';
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in';
+        notification.style.transform = 'translateX(120%)';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+// Add animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// Google login function (placeholder - needs backend implementation)
+function loginWithGoogle() {
+    showNotification('Google login will be implemented soon', 'info');
+    // window.location.href = '/auth/google';
+}
 
 function joinExistingGame() {
     const roomCode = document.getElementById('joinRoomCode').value.trim().toUpperCase();
