@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Player - El Concursillo{% endblock %}
+
+{% block head %}
+<style>
+    .player-interface {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    
+    .game-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .join-form {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .question-container {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .question-text {
+        font-size: 1.4em;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #333;
+    }
+    
+    .options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .option-btn {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border: 2px solid #dee2e6;
+        padding: 15px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 1.1em;
+    }
+    
+    .option-btn:hover {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .option-btn.selected {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        color: white;
+        border-color: #1e7e34;
+    }
+    
+    .option-btn.correct {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        color: white;
+        animation: pulse 1s infinite;
+    }
+    
+    .option-btn.incorrect {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .lifelines {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .lifeline-btn {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+        color: #333;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+    
+    .lifeline-btn:hover { transform: translateY(-2px); }
+    .lifeline-btn:disabled { 
+        background: #6c757d; 
+        color: white; 
+        cursor: not-allowed; 
+        transform: none;
+    }
+    
+    .player-status {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+    }
+    
+    .mini-leaderboard {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin-top: 20px;
+    }
+    
+    .waiting-message {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="player-interface">
+    <div class="game-header">
+        <h1>🎯 El Concursillo</h1>
+        <p>Room: <strong>{{ room_code }}</strong></p>
+    </div>
+    
+    <!-- Join Game Form -->
+    <div class="join-form" id="joinForm">
+        <h2>Join the Game</h2>
+        <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+        <button class="btn-host" onclick="joinGame()">Join Game</button>
+    </div>
+    
+    <!-- Waiting for Game -->
+    <div class="waiting-message" id="waitingMessage" style="display:none;">
+        <h3>⏳ Waiting for host to start the next question...</h3>
+        <p>You're in the game! The host will control when questions appear.</p>
+    </div>
+    
+    <!-- Question Display -->
+    <div class="question-container" id="questionContainer">
+        <div class="question-text" id="questionText"></div>
+        
+        <div class="lifelines" id="lifelines">
+            <button class="lifeline-btn" id="fiftyFiftyBtn" onclick="requestLifeline('fifty_fifty')">
+                🎯 50/50
+            </button>
+            <button class="lifeline-btn" id="phoneFriendBtn" onclick="requestLifeline('phone_friend')">
+                📞 Phone Friend
+            </button>
+            <button class="lifeline-btn" id="askAudienceBtn" onclick="requestLifeline('ask_audience')">
+                👥 Ask Audience
+            </button>
+        </div>
+        
+        <div class="options-grid" id="optionsGrid"></div>
+        
+        <div class="player-status" id="playerStatus">
+            <p>Select your answer and wait for the host to reveal results!</p>
+        </div>
+    </div>
+    
+    <!-- Mini Leaderboard -->
+    <div class="mini-leaderboard" id="miniLeaderboard" style="display:none;">
+        <h3>🏆 Current Rankings</h3>
+        <div id="miniLeaderboardList"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const socket = io();
+let playerName = '';
+let roomCode = '{{ room_code }}';
+let currentQuestionId = '';
+let selectedAnswer = '';
+
+function joinGame() {
+    playerName = document.getElementById('playerName').value.trim();
+    if (!playerName) {
+        alert('Please enter your name!');
+        return;
+    }
+    
+    // Join the room
+    socket.emit('join_room', {
+        room_code: roomCode,
+        username: playerName
+    });
+    
+    document.getElementById('joinForm').style.display = 'none';
+    document.getElementById('waitingMessage').style.display = 'block';
+    document.getElementById('miniLeaderboard').style.display = 'block';
+    
+    // Start polling for questions
+    startQuestionPolling();
+}
+
+function startQuestionPolling() {
+    setInterval(() => {
+        // Poll for new questions
+        fetch(`/game/host/get_room_status/${roomCode}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.current_question_number) {
+                    checkForNewQuestion();
+                }
+                updateMiniLeaderboard(data.players);
+            })
+            .catch(err => console.log('Polling error:', err));
+    }, 3000);
+}
+
+function checkForNewQuestion() {
+    // This would be replaced with WebSocket in full implementation
+    // For now, we'll simulate question updates
+}
+
+function selectOption(optionKey) {
+    selectedAnswer = optionKey;
+    
+    // Update UI
+    document.querySelectorAll('.option-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    document.getElementById(`option-${optionKey}`).classList.add('selected');
+    
+    // Submit answer
+    fetch('/game/player/submit_answer', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            room_code: roomCode,
+            username: playerName,
+            answer: optionKey,
+            question_id: currentQuestionId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('playerStatus').innerHTML = 
+            '<p>✅ Answer submitted! Waiting for host to reveal results...</p>';
+        
+        // Disable all options
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.disabled = true;
+        });
+    });
+}
+
+function requestLifeline(lifelineType) {
+    fetch('/game/player/request_lifeline', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            room_code: roomCode,
+            username: playerName,
+            lifeline: lifelineType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        document.getElementById(`${lifelineType.replace('_', '')}Btn`).disabled = true;
+    });
+}
+
+function updateMiniLeaderboard(players) {
+    const leaderboardList = document.getElementById('miniLeaderboardList');
+    leaderboardList.innerHTML = '';
+    
+    players.slice(0, 5).forEach((player, index) => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'leaderboard-item';
+        playerDiv.innerHTML = `
+            <span>#${index + 1} ${player.username}</span>
+            <span>${player.score} pts</span>
+        `;
+        leaderboardList.appendChild(playerDiv);
+    });
+}
+
+// WebSocket events
+socket.on('new_question', (data) => {
+    currentQuestionId = data.id;
+    document.getElementById('questionText').textContent = data.text;
+    document.getElementById('waitingMessage').style.display = 'none';
+    document.getElementById('questionContainer').style.display = 'block';
+    
+    // Display options
+    const optionsGrid = document.getElementById('optionsGrid');
+    optionsGrid.innerHTML = '';
+    
+    Object.entries(data.options).forEach(([key, value]) => {
+        const optionBtn = document.createElement('button');
+        optionBtn.className = 'option-btn';
+        optionBtn.id = `option-${key}`;
+        optionBtn.innerHTML = `<strong>${key}:</strong> ${value}`;
+        optionBtn.onclick = () => selectOption(key);
+        optionsGrid.appendChild(optionBtn);
+    });
+    
+    // Reset status
+    document.getElementById('playerStatus').innerHTML = 
+        '<p>Select your answer and wait for the host to reveal results!</p>';
+    selectedAnswer = '';
+});
+
+socket.on('answer_revealed', (data) => {
+    // Show correct/incorrect answers
+    Object.entries(data.results).forEach(([username, result]) => {
+        if (username === playerName) {
+            const statusDiv = document.getElementById('playerStatus');
+            if (result.is_correct) {
+                statusDiv.innerHTML = '<p style="color: green;">✅ Correct! Well done!</p>';
+            } else {
+                statusDiv.innerHTML = `<p style="color: red;">❌ Incorrect. The correct answer was ${data.correct_answer}</p>`;
+            }
+        }
+    });
+    
+    // Update leaderboard
+    updateMiniLeaderboard(data.leaderboard);
+});
+</script>
+{% endblock %}

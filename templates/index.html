@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}El Concursillo - Multilingual Quiz Platform{% endblock %}
+
+{% block head %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 20px;
+        border-radius: 20px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .hero-title {
+        font-size: 3em;
+        font-weight: 900;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .hero-subtitle {
+        font-size: 1.2em;
+        opacity: 0.9;
+        margin-bottom: 30px;
+    }
+    
+    .role-selection {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .role-card {
+        background: white;
+        padding: 40px 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: transform 0.3s;
+    }
+    
+    .role-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .role-icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+    }
+    
+    .role-title {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .role-description {
+        color: #666;
+        margin-bottom: 25px;
+        line-height: 1.6;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-size: 1.1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        width: 100%;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .features-section {
+        background: #f8f9fa;
+        padding: 40px 20px;
+        border-radius: 15px;
+        margin-top: 30px;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .feature-item {
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .feature-icon {
+        font-size: 2.5em;
+        margin-bottom: 15px;
+    }
+    
+    .auth-section {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin: 20px 0;
+        display: none;
+    }
+    
+    .auth-form input {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1em;
+    }
+    
+    .auth-tabs {
+        display: flex;
+        margin-bottom: 20px;
+    }
+    
+    .auth-tab {
+        flex: 1;
+        padding: 10px;
+        background: #f8f9fa;
+        border: none;
+        cursor: pointer;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .auth-tab.active {
+        background: #667eea;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1 class="hero-title">🎯 El Concursillo</h1>
+    <p class="hero-subtitle">Multilingual Quiz Platform - Host-Controlled Competition</p>
+</div>
+
+<div class="role-selection">
+    <div class="role-card">
+        <div class="role-icon">🎮</div>
+        <h2 class="role-title">Host a Game</h2>
+        <p class="role-description">
+            Control the quiz show! See correct answers, manage lifelines, 
+            and create an exciting competition for your friends.
+        </p>
+        <button class="btn-primary" onclick="showAuth('host')">Start Hosting</button>
+    </div>
+    
+    <div class="role-card">
+        <div class="role-icon">🏆</div>
+        <h2 class="role-title">Join as Player</h2>
+        <p class="role-description">
+            Compete with friends! Answer questions, use lifelines, 
+            and climb the leaderboard in this exciting quiz challenge.
+        </p>
+        <button class="btn-primary" onclick="showJoinForm()">Join Game</button>
+    </div>
+</div>
+
+<!-- Authentication Section -->
+<div class="auth-section" id="authSection">
+    <div class="auth-tabs">
+        <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Login</button>
+        <button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Register</button>
+    </div>
+    
+    <form class="auth-form" id="authForm">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="text" id="username" placeholder="Username" required style="display:none;">
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit" class="btn-primary" id="authSubmitBtn">Login</button>
+    </form>
+    
+    <button class="btn-primary" onclick="hideAuth()" style="background: #6c757d; margin-top: 10px;">Cancel</button>
+</div>
+
+<!-- Join Game Section -->
+<div class="auth-section" id="joinGameSection">
+    <h3>Join Existing Game</h3>
+    <input type="text" id="joinRoomCode" placeholder="Enter Room Code (e.g., ABC123)" maxlength="6">
+    <input type="text" id="joinPlayerName" placeholder="Your Name" maxlength="20">
+    <button class="btn-primary" onclick="joinExistingGame()">Join Game</button>
+    <button class="btn-primary" onclick="hideJoinForm()" style="background: #6c757d; margin-top: 10px;">Cancel</button>
+</div>
+
+<div class="features-section">
+    <h2 style="text-align: center; margin-bottom: 30px;">✨ Features</h2>
+    <div class="features-grid">
+        <div class="feature-item">
+            <div class="feature-icon">🌍</div>
+            <h3>Multilingual</h3>
+            <p>Support for Spanish, English, French, and German</p>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">🎯</div>
+            <h3>Host Control</h3>
+            <p>Full control over game flow and answer reveals</p>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">🏆</div>
+            <h3>Live Rankings</h3>
+            <p>Real-time leaderboard competition</p>
+        </div>
+        <div class="feature-item">
+            <div class="feature-icon">🆘</div>
+            <h3>Lifelines</h3>
+            <p>50/50, Phone a Friend, Ask the Audience</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let authMode = 'login';
+let targetRole = '';
+
+function showAuth(role) {
+    targetRole = role;
+    document.getElementById('authSection').style.display = 'block';
+}
+
+function hideAuth() {
+    document.getElementById('authSection').style.display = 'none';
+}
+
+function showJoinForm() {
+    document.getElementById('joinGameSection').style.display = 'block';
+}
+
+function hideJoinForm() {
+    document.getElementById('joinGameSection').style.display = 'none';
+}
+
+function switchAuthTab(mode) {
+    authMode = mode;
+    document.getElementById('loginTab').classList.toggle('active', mode === 'login');
+    document.getElementById('registerTab').classList.toggle('active', mode === 'register');
+    document.getElementById('username').style.display = mode === 'register' ? 'block' : 'none';
+    document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Login' : 'Register';
+}
+
+document.getElementById('authForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const username = document.getElementById('username').value;
+    
+    const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
+    const data = authMode === 'login' ? {email, password} : {email, username, password};
+    
+    fetch(endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            if (authMode === 'login' && targetRole === 'host') {
+                window.location.href = '/game/host';
+            } else if (authMode === 'register') {
+                alert('Please check your email to confirm your account before hosting.');
+            }
+            hideAuth();
+        }
+    })
+    .catch(err => console.error('Auth error:', err));
+});
+
+function joinExistingGame() {
+    const roomCode = document.getElementById('joinRoomCode').value.trim().toUpperCase();
+    const playerName = document.getElementById('joinPlayerName').value.trim();
+    
+    if (!roomCode || !playerName) {
+        alert('Please enter both room code and your name!');
+        return;
+    }
+    
+    window.location.href = `/game/player/${roomCode}?name=${encodeURIComponent(playerName)}`;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="{{ get_locale() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}El Concursillo{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Language Selector -->
+    <div class="language-selector">
+        <select id="languageSelect" onchange="changeLanguage(this.value)">
+            <option value="es" {{ 'selected' if get_locale() == 'es' }}>🇪🇸 Español</option>
+            <option value="en" {{ 'selected' if get_locale() == 'en' }}>🇬🇧 English</option>
+            <option value="fr" {{ 'selected' if get_locale() == 'fr' }}>🇫🇷 Français</option>
+            <option value="de" {{ 'selected' if get_locale() == 'de' }}>🇩🇪 Deutsch</option>
+        </select>
+    </div>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        function changeLanguage(lang) {
+            fetch(`/set_language/${lang}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    }
+                });
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

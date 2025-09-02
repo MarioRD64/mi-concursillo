@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block title %}Host Dashboard - El Concursillo{% endblock %}
+
+{% block head %}
+<style>
+    .host-dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .control-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .question-display {
+        background: #fff;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        border-left: 5px solid #4CAF50;
+    }
+    
+    .correct-answer {
+        background: #4CAF50;
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-weight: bold;
+        font-size: 1.2em;
+    }
+    
+    .player-answers {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    
+    .answer-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        margin: 5px 0;
+        border-radius: 5px;
+        background: white;
+    }
+    
+    .answer-correct { background: #d4edda; border-left: 4px solid #28a745; }
+    .answer-incorrect { background: #f8d7da; border-left: 4px solid #dc3545; }
+    
+    .leaderboard {
+        background: #fff;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    
+    .leaderboard-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+    
+    .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: white; }
+    .rank-2 { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); color: white; }
+    .rank-3 { background: linear-gradient(135deg, #CD7F32, #B8860B); color: white; }
+    
+    .lifeline-requests {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    
+    .btn-host {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        margin: 5px;
+        transition: transform 0.2s;
+    }
+    
+    .btn-host:hover { transform: translateY(-2px); }
+    .btn-reveal { background: linear-gradient(135deg, #4CAF50, #45a049); }
+    .btn-next { background: linear-gradient(135deg, #2196F3, #1976D2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="host-dashboard">
+    <!-- Left Panel - Game Control -->
+    <div class="control-panel">
+        <h2>🎮 Host Control Panel</h2>
+        
+        <div class="room-info">
+            <h3>Room Code: <span id="roomCode">-</span></h3>
+            <p>Share this code with players: <strong>/game/player/<span id="playerUrl">-</span></strong></p>
+        </div>
+        
+        <div class="question-controls">
+            <button class="btn-host" onclick="loadNextQuestion()">📝 Load Next Question</button>
+            <button class="btn-host btn-reveal" onclick="revealAnswers()" id="revealBtn" disabled>✅ Reveal Correct Answer</button>
+            <button class="btn-host btn-next" onclick="nextQuestion()" id="nextBtn" disabled>➡️ Next Question</button>
+        </div>
+        
+        <div class="current-question" id="currentQuestion" style="display:none;">
+            <h3>Current Question #<span id="questionNumber">1</span></h3>
+            <div class="question-display">
+                <p id="questionText"></p>
+                <div id="questionOptions"></div>
+                <div class="correct-answer">
+                    ✅ Correct Answer: <span id="correctAnswer"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lifeline Requests -->
+        <div class="lifeline-requests" id="lifelineRequests" style="display:none;">
+            <h4>🆘 Lifeline Requests</h4>
+            <div id="lifelineList"></div>
+        </div>
+    </div>
+    
+    <!-- Right Panel - Players & Answers -->
+    <div class="players-panel">
+        <!-- Live Leaderboard -->
+        <div class="leaderboard">
+            <h2>🏆 Live Leaderboard</h2>
+            <div id="leaderboardList">
+                <p>No players yet...</p>
+            </div>
+        </div>
+        
+        <!-- Player Answers -->
+        <div class="player-answers">
+            <h3>📋 Player Answers</h3>
+            <div id="playerAnswersList">
+                <p>Waiting for answers...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Room Creation Modal -->
+<div id="createRoomModal" class="modal">
+    <div class="modal-content">
+        <h3>Create New Game Room</h3>
+        <select id="languageSelect">
+            <option value="es">🇪🇸 Español</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="de">🇩🇪 Deutsch</option>
+        </select>
+        <button class="btn-host" onclick="createRoom()">Create Room</button>
+        <button class="btn-host" onclick="closeModal()">Cancel</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentRoomCode = '';
+let currentQuestionId = '';
+let questionNumber = 1;
+
+// Show room creation modal on load
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('createRoomModal').style.display = 'block';
+});
+
+function createRoom() {
+    const language = document.getElementById('languageSelect').value;
+    
+    fetch('/game/create_room', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({language: language})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.room_code) {
+            currentRoomCode = data.room_code;
+            document.getElementById('roomCode').textContent = data.room_code;
+            document.getElementById('playerUrl').textContent = data.room_code;
+            closeModal();
+            startStatusUpdates();
+        }
+    });
+}
+
+function closeModal() {
+    document.getElementById('createRoomModal').style.display = 'none';
+}
+
+function loadNextQuestion() {
+    fetch('/game/host/get_question', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            room_code: currentRoomCode,
+            question_number: questionNumber
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            currentQuestionId = data.id;
+            document.getElementById('questionNumber').textContent = questionNumber;
+            document.getElementById('questionText').textContent = data.text;
+            document.getElementById('correctAnswer').textContent = data.correct_answer;
+            
+            // Display options
+            const optionsDiv = document.getElementById('questionOptions');
+            optionsDiv.innerHTML = '';
+            Object.entries(data.options).forEach(([key, value]) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.innerHTML = `<strong>${key}:</strong> ${value}`;
+                optionDiv.style.padding = '5px';
+                optionDiv.style.margin = '3px 0';
+                optionsDiv.appendChild(optionDiv);
+            });
+            
+            document.getElementById('currentQuestion').style.display = 'block';
+            document.getElementById('revealBtn').disabled = false;
+            
+            // Broadcast question to players
+            broadcastQuestion(data);
+        }
+    });
+}
+
+function revealAnswers() {
+    fetch('/game/host/reveal_answers', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            room_code: currentRoomCode,
+            question_id: currentQuestionId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayResults(data.results);
+        updateLeaderboard(data.leaderboard);
+        document.getElementById('revealBtn').disabled = true;
+        document.getElementById('nextBtn').disabled = false;
+    });
+}
+
+function nextQuestion() {
+    questionNumber++;
+    document.getElementById('nextBtn').disabled = true;
+    document.getElementById('playerAnswersList').innerHTML = '<p>Waiting for answers...</p>';
+    loadNextQuestion();
+}
+
+function displayResults(results) {
+    const answersList = document.getElementById('playerAnswersList');
+    answersList.innerHTML = '';
+    
+    results.forEach(result => {
+        const answerDiv = document.createElement('div');
+        answerDiv.className = `answer-item ${result.is_correct ? 'answer-correct' : 'answer-incorrect'}`;
+        answerDiv.innerHTML = `
+            <span><strong>${result.username}</strong>: ${result.answer}</span>
+            <span>${result.is_correct ? '✅' : '❌'}</span>
+        `;
+        answersList.appendChild(answerDiv);
+    });
+}
+
+function updateLeaderboard(leaderboard) {
+    const leaderboardList = document.getElementById('leaderboardList');
+    leaderboardList.innerHTML = '';
+    
+    leaderboard.forEach((player, index) => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = `leaderboard-item rank-${index + 1 <= 3 ? index + 1 : ''}`;
+        playerDiv.innerHTML = `
+            <span><strong>#${index + 1} ${player.username}</strong></span>
+            <span>${player.score} pts (${player.correct_answers} correct)</span>
+        `;
+        leaderboardList.appendChild(playerDiv);
+    });
+}
+
+function startStatusUpdates() {
+    setInterval(() => {
+        if (currentRoomCode) {
+            fetch(`/game/host/get_room_status/${currentRoomCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateLeaderboard(data.players);
+                    updatePendingAnswers(data.pending_answers);
+                    updateLifelineRequests(data.lifeline_requests);
+                });
+        }
+    }, 2000);
+}
+
+function updatePendingAnswers(answers) {
+    if (Object.keys(answers).length > 0) {
+        const answersList = document.getElementById('playerAnswersList');
+        answersList.innerHTML = '';
+        
+        Object.entries(answers).forEach(([username, answerData]) => {
+            const answerDiv = document.createElement('div');
+            answerDiv.className = 'answer-item';
+            answerDiv.innerHTML = `
+                <span><strong>${username}</strong>: ${answerData.answer}</span>
+                <span>⏱️ ${new Date(answerData.timestamp).toLocaleTimeString()}</span>
+            `;
+            answersList.appendChild(answerDiv);
+        });
+    }
+}
+
+function updateLifelineRequests(requests) {
+    const lifelineDiv = document.getElementById('lifelineRequests');
+    const lifelineList = document.getElementById('lifelineList');
+    
+    if (requests.length > 0) {
+        lifelineDiv.style.display = 'block';
+        lifelineList.innerHTML = '';
+        
+        requests.forEach(request => {
+            const requestDiv = document.createElement('div');
+            requestDiv.innerHTML = `
+                <p><strong>${request.username}</strong> wants to use: <strong>${request.lifeline}</strong></p>
+                <button class="btn-host" onclick="approveLifeline('${request.username}', '${request.lifeline}')">✅ Approve</button>
+                <button class="btn-host" onclick="denyLifeline('${request.username}', '${request.lifeline}')">❌ Deny</button>
+            `;
+            lifelineList.appendChild(requestDiv);
+        });
+    } else {
+        lifelineDiv.style.display = 'none';
+    }
+}
+
+function approveLifeline(username, lifeline) {
+    fetch('/game/host/approve_lifeline', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            room_code: currentRoomCode,
+            username: username,
+            lifeline: lifeline,
+            approved: true
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(`Lifeline ${lifeline} approved for ${username}`);
+    });
+}
+
+function broadcastQuestion(questionData) {
+    // This would use WebSocket to send question to all players
+    // For now, players will poll for new questions
+}
+</script>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 15px;
+    width: 400px;
+    text-align: center;
+}
+
+.modal-content select {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+</style>
+{% endblock %}
