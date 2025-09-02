@@ -1,6 +1,8 @@
-from flask import render_template, request, jsonify, session
+import os
+from flask import render_template, request, jsonify, session, send_from_directory
 from flask_babel import _, get_locale
 from app.main import bp
+from app import app
 
 @bp.route('/')
 def index():
@@ -13,8 +15,12 @@ def favicon():
 
 @bp.route('/robots.txt')
 def robots():
-    from flask import send_from_directory
-    return send_from_directory('../static', 'robots.txt')
+    return send_from_directory(app.static_folder, 'robots.txt')
+
+# Serve static files explicitly
+@bp.route('/static/<path:path>')
+def serve_static(path):
+    return send_from_directory(app.static_folder, path)
 
 @bp.route('/set_language/<language>')
 def set_language(language):

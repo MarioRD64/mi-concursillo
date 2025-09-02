@@ -16,18 +16,22 @@ socketio = SocketIO()
 babel = Babel()
 
 def create_app(config_name='default'):
-    app = Flask(__name__)
+    app = Flask(__name__, 
+               static_folder='../../static',
+               static_url_path='/static')
     app.config.from_object(config[config_name])
     
     # Initialize app configuration
     config[config_name].init_app(app)
     
-    # Configure session
+    # Configure session and static files
     app.config.update(
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE='Lax',
-        PERMANENT_SESSION_LIFETIME=timedelta(days=7)
+        PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+        SEND_FILE_MAX_AGE_DEFAULT=0,  # Disable caching for development
+        PREFERRED_URL_SCHEME='https'  # Force HTTPS for URL generation
     )
     
     # Initialize CORS
