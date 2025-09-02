@@ -42,7 +42,7 @@ def create_app(config_name='default'):
     app.register_blueprint(main_bp)
     
     # Language selector
-    @babel.localeselector
+    @app.babel.localeselector
     def get_locale():
         from flask import request, session
         if 'language' in session:
