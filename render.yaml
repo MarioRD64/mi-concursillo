@@ -3,7 +3,7 @@ services:
     name: el-concursillo
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT gunicorn_app:application"
+    startCommand: "gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT wsgi:application"
     envVars:
       - key: FLASK_ENV
         value: production
