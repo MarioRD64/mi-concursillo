@@ -219,9 +219,10 @@ def iniciar_partida(data):
     socketio.emit("inicio_partida", {"sala": sala}, room=sala)
 
 # Iniciar base de datos
+with app.app_context():
+    db.create_all()
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 Servidor corriendo en puerto {port}...")
     socketio.run(app, host="0.0.0.0", port=port, debug=False)
