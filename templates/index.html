@@ -434,16 +434,29 @@ document.getElementById('authForm').addEventListener('submit', async function(e)
         const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
         const data = authMode === 'login' ? {email, password} : {email, username, password};
         
+        console.log('Sending request to:', endpoint, 'with data:', data);
+        
         const response = await fetch(endpoint, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'include',  // Important for session cookies
             body: JSON.stringify(data)
         });
         
-        const responseData = await response.json();
+        let responseData;
+        try {
+            responseData = await response.json();
+            console.log('Response status:', response.status, 'Data:', responseData);
+        } catch (e) {
+            console.error('Failed to parse JSON response:', e);
+            throw new Error('Invalid server response');
+        }
         
         if (!response.ok) {
-            throw new Error(responseData.error || 'An error occurred');
+            throw new Error(responseData.error || `Server error: ${response.status}`);
         }
         
         // Show success message
