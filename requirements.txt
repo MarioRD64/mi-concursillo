@@ -11,4 +11,5 @@ Babel==2.12.1
 pytz==2023.3
 gunicorn==21.2.0
 eventlet==0.33.3
+gevent-websocket==0.10.1
 psycopg2-binary==2.9.7
