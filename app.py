@@ -17,8 +17,12 @@ gevent.monkey.patch_all()
 
 # Inicialización
 app = Flask(__name__)
-app.secret_key = "super_secreta"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///usuarios.db"
+app.secret_key = os.environ.get('SECRET_KEY') or "super_secreta"
+database_url = os.environ.get('DATABASE_URL') or "sqlite:///usuarios.db"
+# Handle Render PostgreSQL URL format
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAIL_SERVER"] = "smtp.gmail.com"
 app.config["MAIL_PORT"] = 587
@@ -218,5 +222,6 @@ def iniciar_partida(data):
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    print("🚀 Servidor corriendo en puerto 5000...")
-    socketio.run(app, host="0.0.0.0", port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Servidor corriendo en puerto {port}...")
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
