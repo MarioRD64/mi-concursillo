@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'super_secreta_key_for_development'
@@ -44,6 +45,7 @@ class ProductionConfig(Config):
         
         # Log to stderr in production
         import logging
+        import os
         from logging import StreamHandler
         file_handler = StreamHandler()
         file_handler.setLevel(logging.INFO)
